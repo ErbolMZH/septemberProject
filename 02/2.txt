@@ -1,0 +1,264 @@
+<template v-if="activeTab === 'inquiries'">
+  <template v-if="incident.inquiries && incident.inquiries.length > 0">
+    <button class="btn btn-primary" @click="openInquiryModal()">
+      + Добавить Запрос
+    </button>
+    <div class="form-max-width w100 mt15">
+      <div class="form-col card-info">
+        <table class="tbl w100 zebra">
+          <thead>
+            <tr>
+              <th>ID Запроса</th>
+              <th>Отправитель (БИН)</th>
+              <th>Email Отправителя</th>
+              <th>Получатель (БИН)</th>
+              <th>Дата создания</th>
+              <th>Описание</th>
+              <th>Статус</th>
+              <th>Файл</th>
+              <th>Действие</th> <!-- ➕ Новая колонка -->
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="inquiry in incident.inquiries" :key="inquiry.inquiry_id">
+              <td><code>{{ inquiry.inquiry_id }}</code></td>
+              <td>{{ inquiry.sender_bin }}</td>
+              <td>{{ inquiry.sender_email }}</td>
+              <td>{{ inquiry.receiver_bin }}</td>
+              <td>{{ toLocaleDate(inquiry.created_date) }}</td>
+              <td>{{ inquiry.description || "-" }}</td>
+              <td>
+                <span :class="inquiry.is_unread ? 'badge-unread' : 'badge-read'">
+                  {{ inquiry.is_unread ? 'Не прочитан' : 'Прочитан' }}
+                </span>
+              </td>
+              <td>
+                <div v-if="getInquiryFiles(inquiry).length > 0" class="files-container">
+                  <button 
+                    v-for="file in getInquiryFiles(inquiry)" 
+                    :key="file.id" 
+                    class="btn-file-download" 
+                    :title="'Скачать ' + file.name" 
+                    @click="downloadAttachment(file)"
+                  >
+                    <i class="icon-file"></i>
+                    <span class="file-name">{{ file.name }}</span>
+                  </button>
+                </div>
+                <span v-else class="text-muted">-</span>
+              </td>
+              <td>
+                <!-- ➕ Кнопка вызова модального окна ответа -->
+                <button 
+                  class="btn btn-sm btn-outline-primary" 
+                  @click="openResponseModal(inquiry)"
+                  title="Отправить ответ"
+                >
+                  Ответить
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <template v-else>
+    <div class="form-max-width w100 mt15">
+      <div class="form-col card-info text-center">
+        <p class="text-muted">Данные отсутствуют</p>
+        <button class="btn btn-primary" @click="openInquiryModal()">
+          + Добавить Запрос
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- 📌 Модальное окно создания запроса -->
+  <div v-if="showInquiryModal" class="modal-backdrop" @click.self="showInquiryModal=false">
+    <div class="modal-card1">
+      <div class="modal-header">
+        <h3>Создать запрос по инциденту</h3>
+        <button class="btn-close" @click="showInquiryModal=false">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div v-if="inquiryError" class="alert alert-danger mb10">
+          {{ inquiryError }}
+        </div>
+
+        <div class="form-group">
+          <label>Организация (БИН):</label>
+          <select v-model="newInquiry.targetBin" class="form-control">
+            <option :value="null" disabled>Выберите организацию</option>
+            <option v-for="org in relatedOrgs" :key="org.code" :value="org.code">
+              {{ org.organization_name }} (БИН: {{ org.code }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group mt10">
+          <label>Описание запроса:</label>
+          <textarea v-model="newInquiry.description" class="form-control" rows="4" placeholder="Введите текст запроса..."></textarea>
+        </div>
+
+        <div class="form-group mt10">
+          <label>Прикрепить файлы (PDF, PNG, JPG):</label>
+          <input type="file" multiple @change="handleFileUpload" accept=".pdf,.png,.jpg,.jpeg" class="form-control" />
+        </div>
+      </div>
+
+      <div class="modal-footer mt15">
+        <button class="btn btn-secondary" @click="closeInquiryModal" :disabled="isSubmittingInquiry">
+          Отмена
+        </button>
+        <button class="btn btn-primary" @click="submitInquiry" :disabled="isSubmittingInquiry">
+          {{ isSubmittingInquiry ? 'Отправка...' : 'Отправить' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ➕ 📌 Новое модальное окно: Предоставление ответа на запрос -->
+  <div v-if="showResponseModal" class="modal-backdrop" @click.self="closeResponseModal">
+    <div class="modal-card1">
+      <div class="modal-header">
+        <h3>Ответ на запрос № {{ selectedInquiryForResponse?.inquiry_id }}</h3>
+        <button class="btn-close" @click="closeResponseModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div v-if="responseError" class="alert alert-danger mb10">
+          {{ responseError }}
+        </div>
+
+        <div class="form-group">
+          <label>Текст ответа:</label>
+          <textarea 
+            v-model="responseForm.description" 
+            class="form-control" 
+            rows="4" 
+            placeholder="Введите текст ответа..."
+          ></textarea>
+        </div>
+
+        <div class="form-group mt10">
+          <label>Прикрепить файлы к ответу (PDF, PNG, JPG):</label>
+          <input 
+            type="file" 
+            multiple 
+            @change="handleResponseFileUpload" 
+            accept=".pdf,.png,.jpg,.jpeg" 
+            class="form-control" 
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer mt15">
+        <button class="btn btn-secondary" @click="closeResponseModal" :disabled="isSubmittingResponse">
+          Отмена
+        </button>
+        <button class="btn btn-primary" @click="submitInquiryResponse" :disabled="isSubmittingResponse">
+          {{ isSubmittingResponse ? 'Отправка...' : 'Отправить ответ' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+
+data() {
+  return {
+    // ... существующие переменные ...
+    
+    // Переменные для формы ответа:
+    showResponseModal: false,
+    isSubmittingResponse: false,
+    responseError: '',
+    selectedInquiryForResponse: null,
+    responseForm: {
+      description: '',
+      files: []
+    }
+  };
+},
+methods: {
+  // ... существующие методы ...
+
+  // Открыть модальное окно ответа
+  openResponseModal(inquiry) {
+    this.selectedInquiryForResponse = inquiry;
+    this.responseForm = {
+      description: '',
+      files: []
+    };
+    this.responseError = '';
+    this.showResponseModal = true;
+  },
+
+  // Закрыть модальное окно ответа
+  closeResponseModal() {
+    this.showResponseModal = false;
+    this.selectedInquiryForResponse = null;
+    this.responseError = '';
+  },
+
+  // Обработка прикрепленных файлов для ответа
+  handleResponseFileUpload(event) {
+    this.responseForm.files = Array.from(event.target.files);
+  },
+
+  // Отправка ответа на бэкенд
+  async submitInquiryResponse() {
+    if (!this.responseForm.description.trim()) {
+      this.responseError = 'Введите текст ответа';
+      return;
+    }
+
+    this.isSubmittingResponse = true;
+    this.responseError = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('description', this.responseForm.description);
+      
+      // Добавляем прикрепленные файлы
+      if (this.responseForm.files.length > 0) {
+        this.responseForm.files.forEach(file => {
+          formData.append('files', file);
+        });
+      }
+
+      const incidentId = this.incident.incident_id || this.incident.id;
+      const inquiryId = this.selectedInquiryForResponse.inquiry_id;
+
+      // Запрос к эндпоинту бэкенда
+      const response = await fetch(`/api/v1/incidents/${incidentId}/inquiries/${inquiryId}/response`, {
+        method: 'POST',
+        headers: {
+          // 'Authorization': `Bearer ${token}` — добавьте авторизацию при необходимости
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || result.details || 'Ошибка при отправке ответа');
+      }
+
+      // Успешно отправлено
+      this.closeResponseModal();
+      
+      // Обновить данные инцидента/список запросов (вызовите вашу функцию обновления)
+      if (typeof this.fetchIncidentData === 'function') {
+        this.fetchIncidentData();
+      }
+    } catch (err) {
+      this.responseError = err.message || 'Произошла ошибка соединения';
+    } finally {
+      this.isSubmittingResponse = false;
+    }
+  }
+}
