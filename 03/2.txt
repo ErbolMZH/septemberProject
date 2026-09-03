@@ -1,0 +1,189 @@
+// --- Обновлённые DTO под спецификацию внешнего API (как на вашем снимке) ---
+
+type ExternalFileInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type ExternalAttachment struct {
+	DocType string             `json:"docType"` // Важно: camelCase
+	Files   []ExternalFileInfo `json:"files"`
+}
+
+type ExternalResponseAdditionalData struct {
+	Description string               `json:"description"`
+	Attachments []ExternalAttachment `json:"attachments"`
+}
+
+// ExternalResponsePayload — корневая обёртка ответа для внешнего сервиса
+type ExternalResponsePayload struct {
+	AdditionalData ExternalResponseAdditionalData `json:"additionalData"`
+}
+
+
+// --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ЗАПИСИ В БД (Без изменений) ---
+
+func InsertInquiryResponseRawTarget(body []byte, status int, incidentID string, inquiryID string) error {
+	q := `INSERT INTO inquiries_json(json_, status, incident_id) VALUES($1, $2, $3);`
+	_, err := pg.DB().Exec(q, body, status, incidentID)
+	if err != nil {
+		logger.Log("ERROR", "InsertInquiryResponseRawTarget", inquiryID, fmt.Sprintf("failed to insert response JSON: %s", err), nil)
+		return fmt.Errorf("failed to insert raw response JSON: %w", err)
+	}
+
+	callProceduryQuery := `CALL public.p_prc_inquiries_json();`
+	_, err = pg.DB().Exec(callProceduryQuery)
+	if err != nil {
+		logger.Log("ERROR", "InsertInquiryResponseRawTarget", inquiryID, fmt.Sprintf("Failed to execute p_prc_inquiries_json(): %s", err), nil)
+		return fmt.Errorf("Failed to execute p_prc_inquiries_json(): %w", err)
+	}
+
+	return nil
+}
+
+
+// --- ОСНОВНОЙ ХЭНДЛЕР ---
+
+// POST /api/v1/incidents/:id/inquiries/:inquiry_id/response
+func AFResponseInquiryHandler(c echo.Context) error {
+	incidentID := c.Param("id")
+	inquiryID := c.Param("inquiry_id")
+
+	if incidentID == "" || inquiryID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Incident ID and Inquiry ID are required"})
+	}
+
+	// 1. Парсим multipart-форму (до 32MB)
+	if err := c.Request().ParseMultipartForm(32 << 20); err != nil {
+		fmt.Printf("[MULTIPART PARSE INFO]: %v\n", err)
+	}
+
+	description := strings.TrimSpace(c.FormValue("description"))
+	docType := strings.TrimSpace(c.FormValue("doc_type"))
+
+	if description == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Описание ответа не может быть пустым"})
+	}
+
+	if docType == "" {
+		docType = "PAYMEN_POINT" // Тип документа по умолчанию из вашей спецификации
+	}
+
+	// 2. Проверка и обновление токена авторизации
+	authData, _ := model.AFGetAuthStruct()
+	if int(time.Since(authData.CreatedAt).Seconds()) >= authData.RefreshExpiresIn {
+		var err error
+		authData, _, err = model.AFAuth("response_inquiry token expired")
+		if err != nil {
+			logger.Log("ERROR", "response_inquiry_handler", inquiryID, "AFAuth fiasco", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Authentication failed"})
+		}
+	}
+	model.AFGlobalAuthData = authData
+
+	baseURL := strings.TrimRight(comps.Config.AF.APIURL, "/")
+
+	// 3. Обработка и выгрузка прикреплённых файлов
+	var uploadedFiles []ExternalFileInfo
+	form, err := c.MultipartForm()
+
+	if err == nil && form != nil && form.File != nil {
+		var files []*multipart.FileHeader
+		if f, ok := form.File["files"]; ok {
+			files = f
+		} else if f, ok := form.File["files[]"]; ok {
+			files = f
+		}
+
+		if len(files) > 0 {
+			allowedExts := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".pdf": true}
+			const maxFileSize = 10 * 1024 * 1024
+
+			uploadFileURL := fmt.Sprintf("%s/external/v1/files?target=INCIDENT_FILES", baseURL)
+
+			for _, fileHeader := range files {
+				if fileHeader.Size > maxFileSize {
+					return c.JSON(http.StatusBadRequest, echo.Map{
+						"error": fmt.Sprintf("Файл %s превышает предел в 10MB", fileHeader.Filename),
+					})
+				}
+
+				ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+				if !allowedExts[ext] {
+					return c.JSON(http.StatusBadRequest, echo.Map{
+						"error": fmt.Sprintf("Формат %s недопустим. Разрешены: PDF, PNG, JPG", ext),
+					})
+				}
+
+				// Загружаем файл во внешний сервис
+				fileID, err := uploadFileToExternal(uploadFileURL, fileHeader, authData.AccessToken)
+				if err != nil {
+					logger.Log("ERROR", "response_inquiry_handler", inquiryID, "File upload failed", err)
+					return c.JSON(http.StatusInternalServerError, echo.Map{
+						"error": fmt.Sprintf("Ошибка загрузки файла %s во внешний сервис", fileHeader.Filename),
+					})
+				}
+
+				uploadedFiles = append(uploadedFiles, ExternalFileInfo{
+					ID:   fileID,
+					Name: fileHeader.Filename,
+				})
+			}
+		}
+	}
+
+	// 4. Формируем вложения (обязательно пустой слайс make([]...), а не nil, чтобы получить [] в JSON)
+	attachments := make([]ExternalAttachment, 0)
+	if len(uploadedFiles) > 0 {
+		attachments = append(attachments, ExternalAttachment{
+			DocType: docType,
+			Files:   uploadedFiles,
+		})
+	}
+
+	// 5. Формируем Payload ответа СТРОГО с полем additionalData
+	reqPayload := ExternalResponsePayload{
+		AdditionalData: ExternalResponseAdditionalData{
+			Description: description,
+			Attachments: attachments,
+		},
+	}
+
+	jsonPayload, err := json.Marshal(reqPayload)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to prepare response payload"})
+	}
+
+	// Логируем JSON для контроля перед отправкой
+	fmt.Printf("[SENDING PAYLOAD TO EXTERNAL SERVICE]: %s\n", string(jsonPayload))
+
+	// 6. Отправляем ответ во внешний сервис
+	targetURL := fmt.Sprintf("%s/external/v1/incidents/%s/inquiries/%s/response", baseURL, incidentID, inquiryID)
+	body, status, err := sendPostInquiry(targetURL, jsonPayload, authData.AccessToken)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to connect to external service"})
+	}
+
+	if status == http.StatusUnauthorized {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Unauthorized in external service"})
+	}
+
+	// 7. Сохранение успешного ответа в локальную БД
+	if status >= 200 && status < 300 {
+		if errRaw := InsertInquiryResponseRawTarget(jsonPayload, status, incidentID, inquiryID); errRaw != nil {
+			logger.Log("ERROR", "response_inquiry_handler", inquiryID, fmt.Sprintf("Save response to DB failed: %v", errRaw), errRaw)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to save response data locally"})
+		}
+
+		return c.JSON(status, echo.Map{
+			"message": "Response sent and saved successfully",
+			"status":  status,
+		})
+	}
+
+	return c.JSON(status, echo.Map{
+		"error":   "External service error",
+		"status":  status,
+		"details": string(body),
+	})
+}
