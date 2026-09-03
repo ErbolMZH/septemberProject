@@ -1,0 +1,31 @@
+<!-- Блок с ответом на запрос -->
+<div v-if="currentInquiryResponse" class="inquiry-response-block card mt-3 p-3 bg-light">
+  <h6 class="text-success font-weight-bold">
+    <i class="fa fa-check-circle"></i> Предоставленный ответ:
+  </h6>
+  
+  <p class="mb-2">
+    <strong>Текст ответа:</strong> 
+    {{ currentInquiryResponse.content?.additionalData?.description }}
+  </p>
+
+  <!-- Список прикрепленных файлов ответа, если есть -->
+  <div v-if="currentInquiryResponse.content?.additionalData?.attachments?.length" class="mt-2">
+    <strong>Прикрепленные файлы:</strong>
+    <ul class="list-unstyled mt-1">
+      <template v-for="group in currentInquiryResponse.content.additionalData.attachments">
+        <li v-for="file in group.files" :key="file.id" class="badge badge-secondary p-2 mr-2 mb-1">
+          <i class="fa fa-paperclip"></i> {{ file.name }}
+        </li>
+      </template>
+    </ul>
+  </div>
+
+  <small class="text-muted d-block mt-2">
+    Дата отправки: {{ new Date(currentInquiryResponse.created_at).toLocaleString() }}
+  </small>
+</div>
+
+<div v-else-if="isLoadingResponse" class="text-muted mt-2">
+  Загрузка ответа...
+</div>
