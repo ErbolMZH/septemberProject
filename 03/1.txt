@@ -1,0 +1,119 @@
+func AFResponseInquiryHandler(c echo.Context) error {
+	incidentID := c.Param("id")
+	inquiryID := c.Param("inquiry_id")
+
+	if incidentID == "" || inquiryID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Incident ID and Inquiry ID are required"})
+	}
+
+	// 1. Извлекаем комментарий из формы
+	description := strings.TrimSpace(c.FormValue("description"))
+	if description == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Описание ответа не может быть пустым"})
+	}
+
+	// 2. Обработка загружаемых файлов
+	form, err := c.MultipartForm()
+	var uploadedFiles []AttachmentFile
+
+	if err == nil && form != nil {
+		files := form.File["files"]
+
+		// Создаем временную папку для загрузок, если её нет
+		uploadDir := "./uploads"
+		if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to create upload directory"})
+		}
+
+		for _, file := range files {
+			// Проверка расширения файла
+			ext := strings.ToLower(filepath.Ext(file.Filename))
+			if ext != ".pdf" && ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+				return c.JSON(http.StatusBadRequest, echo.Map{
+					"error": fmt.Sprintf("Неподдерживаемый формат файла: %s. Разрешены PDF, PNG, JPG", file.Filename),
+				})
+			}
+
+			// Проверка размера файла (макс. 10MB)
+			if file.Size > 10*1024*1024 {
+				return c.JSON(http.StatusBadRequest, echo.Map{
+					"error": fmt.Sprintf("Файл %s превышает допустимый размер 10 MB", file.Filename),
+				})
+			}
+
+			// Открытие исходного файла
+			src, err := file.Open()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to open uploaded file"})
+			}
+			defer src.Close()
+
+			// Генерация UUID файла
+			fileID := uuid.New().String()
+			dstPath := filepath.Join(uploadDir, fmt.Sprintf("%s%s", fileID, ext))
+
+			// Сохранение файла на диск
+			dst, err := os.Create(dstPath)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to save file on server"})
+			}
+			defer dst.Close()
+
+			if _, err = io.Copy(dst, src); err != nil {
+				return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to write file contents"})
+			}
+
+			// Добавляем файл в список
+			uploadedFiles = append(uploadedFiles, AttachmentFile{
+				ID:   fileID,
+				Name: file.Filename,
+			})
+		}
+	}
+
+	// 3. Формируем массив attachments
+	attachments := make([]AttachmentGroup, 0)
+	if len(uploadedFiles) > 0 {
+		attachments = append(attachments, AttachmentGroup{
+			DocType: "PAYMEN_POINT", // Тип документа по вашей спецификации
+			Files:   uploadedFiles,
+		})
+	}
+
+	// 4. Собираем итоговый JSON-пакет strictly как требует внешний сервис
+	reqPayload := ExternalResponsePayload{
+		AdditionalData: ResponseAdditionalData{
+			Description: description,
+			Attachments: attachments,
+		},
+	}
+
+	jsonPayload, err := json.Marshal(reqPayload)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to serialize response payload"})
+	}
+
+	// Выводим сгенерированный JSON в консоль Go для контроля
+	fmt.Printf("[DEBUG PAYLOAD TO EXTERNAL SERVICE]: %s\n", string(jsonPayload))
+
+	// 5. Отправка запроса во внешний сервис (АФЦ / НПК)
+	// Достаем авторизационный токен пользователя из исходного запроса
+	authHeader := c.Request().Header.Get("Authorization")
+
+	// ВАЖНО: Замените sendPostInquiry на вашу служебную функцию отправки в стороннее API
+	// В качестве пути внешнего API передаются incidentID и inquiryID
+	externalURL := fmt.Sprintf("/external-api/incidents/%s/inquiries/%s/response", incidentID, inquiryID)
+	
+	respBody, err := sendExternalRequest("POST", externalURL, jsonPayload, authHeader)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error":   "External service error",
+			"details": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "Response submitted successfully",
+		"data":    string(respBody),
+	})
+}
