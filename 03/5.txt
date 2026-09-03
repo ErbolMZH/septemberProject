@@ -1,0 +1,29 @@
+<!-- ⬇️ ДОБАВЬТЕ ЭТОТ БЛОК (вывод ответа в отдельную строку таблицы) ⬇️ -->
+      <tr v-if="inquiry.response" :key="'resp-' + inquiry.inquiry_id" class="bg-light">
+        <td colspan="9" class="p-3">
+          <div class="p-2 border rounded bg-white">
+            <div class="text-success font-weight-bold mb-1">
+              <i class="fa fa-check-circle"></i> Предоставлен ответ:
+            </div>
+            
+            <!-- Описание ответа -->
+            <p class="mb-2 text-dark">
+              {{ getResponseData(inquiry.response)?.additionalData?.description || 'Нет описания' }}
+            </p>
+
+            <!-- Список файлов ответа (если есть) -->
+            <div v-if="getResponseData(inquiry.response)?.additionalData?.attachments?.length" class="mt-2">
+              <small class="text-muted d-block mb-1">Прикрепленные файлы:</small>
+              <template v-for="group in getResponseData(inquiry.response).additionalData.attachments">
+                <span v-for="file in group.files" :key="file.id" class="badge badge-secondary p-2 mr-2 mb-1">
+                  📎 {{ file.name }}
+                </span>
+              </template>
+            </div>
+
+            <small class="text-muted d-block mt-2">
+              Дата отправки: {{ new Date(inquiry.response.created_at).toLocaleString() }}
+            </small>
+          </div>
+        </td>
+      </tr>
