@@ -1,0 +1,60 @@
+async submitInquiryResponse() {
+  if (!this.responseForm.description || !this.responseForm.description.trim()) {
+    this.responseError = 'Введите текст ответа';
+    return;
+  }
+
+  this.isSubmittingResponse = true;
+  this.responseError = '';
+
+  try {
+    const formData = new FormData();
+    formData.append('description', this.responseForm.description.trim());
+
+    // Добавляем прикрепленные файлы, если они есть
+    if (this.responseForm.files && this.responseForm.files.length > 0) {
+      this.responseForm.files.forEach(file => {
+        formData.append('files', file);
+      });
+    }
+
+    // 1. Исправлено объявление переменных
+    const incidentId = this.incident?.incident_id || this.incident_id || this.incident?.id;
+    const inquiryId = this.selectedInquiryForResponse?.inquiry_id;
+    const token = localStorage.getItem('token');
+
+    if (!incidentId || !inquiryId) {
+      throw new Error('Не удалось определить ID инцидента или запроса');
+    }
+
+    // Запрос к эндпоинту бэкенда
+    const response = await fetch(`/api/v1/incidents/${incidentId}/inquiries/${inquiryId}/response`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || result.details || 'Ошибка при отправке ответа');
+    }
+
+    // Успешно отправлено — закрываем модальное окно
+    this.closeResponseModal();
+
+    // 2. Исправлен вызов обновления: вызываем fetchIncidentInfo, который у вас используется в mounted()
+    if (typeof this.fetchIncidentInfo === 'function') {
+      this.fetchIncidentInfo(incidentId);
+    } else if (typeof this.fetchIncidentData === 'function') {
+      this.fetchIncidentData();
+    }
+
+  } catch (err) {
+    this.responseError = err.message || 'Произошла ошибка соединения';
+  } finally {
+    this.isSubmittingResponse = false;
+  }
+}
