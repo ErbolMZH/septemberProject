@@ -1,0 +1,132 @@
+// GET /api/v1/incidents/:id
+func GetIncidentHandler(c echo.Context) error {
+	incidentID := c.Param("id")
+	if incidentID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Incident ID required"})
+	}
+
+	// 1. Получаем основной инцидент из БД (пример функции)
+	incident, err := model.GetIncidentByID(incidentID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{"error": "Incident not found"})
+	}
+
+	// 2. Выборка всех запросов инцидента вместе с ответами
+	query := `
+		SELECT 
+			i.inquiry_id,
+			COALESCE(i.sender_bin, ''),
+			COALESCE(i.sender_email, ''),
+			COALESCE(i.receiver_bin, ''),
+			i.created_date,
+			COALESCE(i.description, ''),
+			i.is_unread,
+			r.description AS resp_description,
+			r.created_at AS resp_created_at,
+			r.files_json AS resp_files
+		FROM inquiries i
+		LEFT JOIN inquiries_responses r ON i.inquiry_id = r.inquiry_id
+		WHERE i.incident_id = $1
+		ORDER BY i.created_date DESC;
+	`
+
+	rows, err := pg.DB().Query(query, incidentID)
+	if err != nil {
+		logger.Log("ERROR", "GetIncidentHandler", incidentID, "Failed to query inquiries", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Database error"})
+	}
+	defer rows.Close()
+
+	inquiries := make([]model.Inquiry, 0)
+
+	for rows.Next() {
+		var inq model.Inquiry
+		var respDesc *string
+		var respCreatedAt *time.Time
+		var respFilesRaw []byte
+
+		err := rows.Scan(
+			&inq.InquiryID,
+			&inq.SenderBIN,
+			&inq.SenderEmail,
+			&inq.ReceiverBIN,
+			&inq.CreatedDate,
+			&inq.Description,
+			&inq.IsUnread,
+			&respDesc,
+			&respCreatedAt,
+			&respFilesRaw,
+		)
+		if err != nil {
+			continue
+		}
+
+		// Если есть описание ответа — формируем структуру response
+		if respDesc != nil {
+			var files []model.ResponseFileInfo
+			if len(respFilesRaw) > 0 {
+				_ = json.Unmarshal(respFilesRaw, &files)
+			}
+			if files == nil {
+				files = make([]model.ResponseFileInfo, 0)
+			}
+
+			inq.Response = &model.InquiryResponse{
+				Description: *respDesc,
+				CreatedAt:   respCreatedAt,
+				Files:       files,
+			}
+		} else {
+			// Если ответа нет — отправляем nil (в JSON будет null)
+			inq.Response = nil
+		}
+
+		inquiries = append(inquiries, inq)
+	}
+
+	// Присваиваем запросы инциденту
+	incident.Inquiries = inquiries
+
+	// Отправляем JSON на фронтенд
+	return c.JSON(http.StatusOK, incident)
+}
+
+
+<!-- СТРОКА С ОТВЕТОМ (Отображается только если у запроса есть inquiry.response) -->
+    <tr v-if="inquiry.response" class="response-row">
+      <td colspan="9" style="background-color: #f8f9fa; padding: 12px 20px; border-bottom: 2px solid #e9ecef;">
+        <div style="border-left: 4px solid #198754; padding-left: 15px; text-align: left;">
+          
+          <!-- Шапка ответа -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <strong style="color: #198754; font-size: 13px;">
+              💬 Ответ на запрос № {{ inquiry.inquiry_id }}:
+            </strong>
+            <small class="text-muted" v-if="inquiry.response.created_at">
+              {{ toLocaleDate(inquiry.response.created_at) }}
+            </small>
+          </div>
+
+          <!-- Текст ответа -->
+          <div style="white-space: pre-wrap; font-size: 13px; color: #212529; margin-bottom: 8px;">
+            {{ inquiry.response.description }}
+          </div>
+
+          <!-- Прикреплённые файлы ответа -->
+          <div v-if="getResponseFiles(inquiry).length > 0" class="files-container" style="margin-top: 6px;">
+            <span style="font-size: 12px; color: #6c757d; margin-right: 8px;">Файлы к ответу:</span>
+            <button 
+              v-for="file in getResponseFiles(inquiry)" 
+              :key="file.id || file.name" 
+              class="btn-file-download" 
+              :title="'Скачать ' + file.name" 
+              @click="downloadAttachment(file)"
+            >
+              <i class="icon-file"></i>
+              <span class="file-name">{{ file.name }}</span>
+            </button>
+          </div>
+
+        </div>
+      </td>
+    </tr>
