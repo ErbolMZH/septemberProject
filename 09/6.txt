@@ -1,0 +1,13 @@
+/* Яркая/заметная подсветка всей строки для receiver_bin = 0101156113165 */
+tr.inquiry-row-main.row-special-receiver,
+tr.inquiry-row-main.row-special-receiver > td {
+  background-color: #ffe7ba !important; /* Мягкий оранжевый/янтарный цвет для привлекающего внимание фона */
+  /* background-color: #d6e4ff !important;  <- Если нужен акцентный синий вместо оранжевого */
+  font-weight: 500; /* Делает текст слегка более четким */
+}
+
+/* Эффект при наведении на такую строку */
+tr.inquiry-row-main.row-special-receiver:hover,
+tr.inquiry-row-main.row-special-receiver:hover > td {
+  background-color: #ffd591 !important;
+}
