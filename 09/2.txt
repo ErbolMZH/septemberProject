@@ -1,0 +1,38 @@
+type RawResponseJSON struct {
+			AdditionalData struct {
+				Description string `json:"description"`
+				Attachments []struct {
+					DocType string `json:"docType"`
+					Files   []struct {
+						ID   string `json:"id"`
+						Name string `json:"name"`
+					} `json:"files"`
+				} `json:"attachments"`
+			} `json:"additionalData"`
+		}
+
+		// Пробегаемся по полученным запросам и парсим их ответы
+		for i := range inquiries {
+			if inquiries[i].ResponseJSON != "" {
+				var raw RawResponseJSON
+				if err := json.Unmarshal([]byte(inquiries[i].ResponseJSON), &raw); err == nil {
+					
+					// Собираем все файлы в плоский массив
+					filesList := make([]map[string]string, 0)
+					for _, att := range raw.AdditionalData.Attachments {
+						for _, f := range att.Files {
+							filesList = append(filesList, map[string]string{
+								"id":   f.ID,
+								"name": f.Name,
+							})
+						}
+					}
+
+					// Заполняем поле Response объектом с ответом и файлами
+					inquiries[i].Response = map[string]interface{}{
+						"description": raw.AdditionalData.Description,
+						"files":       filesList,
+					}
+				}
+			}
+		}
