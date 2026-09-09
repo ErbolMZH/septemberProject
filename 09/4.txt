@@ -1,0 +1,30 @@
+<td colspan="9">
+        <div class="response-card-inner">
+          <div class="response-header">
+            <span class="response-title">💬 Ответ на запрос:</span>
+          </div>
+
+          <!-- Текст ответа -->
+          <div class="response-body">
+            {{ inquiry.response.description }}
+          </div>
+
+          <!-- Файлы ответа -->
+          <div v-if="inquiry.response.files && inquiry.response.files.length > 0" class="response-files">
+            <button 
+              v-for="file in inquiry.response.files" 
+              :key="file.id || file.name" 
+              class="btn-file-download" 
+              @click="downloadAttachment(file)"
+            >
+              <i class="icon-file"></i>
+              <span class="file-name">{{ file.name }}</span>
+            </button>
+          </div>
+        </div>
+      </td>
+
+
+<tr :key="'spacer_' + inquiry.inquiry_id" class="inquiry-spacer-row">
+      <td colspan="9"></td>
+    </tr>
