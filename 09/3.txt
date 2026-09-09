@@ -1,0 +1,90 @@
+/* Отступы между отдельными группами запросов */
+.inquiry-spacer-row td {
+  height: 12px !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Основная строка запроса */
+.inquiry-row-main td {
+  border-top: 1px solid #e0e6ed !important;
+  border-bottom: 1px solid #e0e6ed !important;
+  background-color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.inquiry-row-main td:first-child {
+  border-left: 1px solid #e0e6ed !important;
+  border-top-left-radius: 8px;
+}
+
+.inquiry-row-main td:last-child {
+  border-right: 1px solid #e0e6ed !important;
+  border-top-right-radius: 8px;
+}
+
+/* Если ответа нет, закругляем и нижние углы строки запроса */
+.inquiry-row-main:not(.has-response) td:first-child {
+  border-bottom-left-radius: 8px;
+}
+.inquiry-row-main:not(.has-response) td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+/* Строка ответа — соединяется с запросом */
+.inquiry-row-response td {
+  background-color: #f8fafc !important;
+  border-left: 1px solid #e0e6ed !important;
+  border-right: 1px solid #e0e6ed !important;
+  border-bottom: 1px solid #e0e6ed !important;
+  border-top: 1px dashed #cbd5e1 !important; /* Пунктир между запросом и ответом */
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  padding: 12px 20px !important;
+}
+
+/* Внутренняя карточка ответа с зеленым акцентом */
+.response-card-inner {
+  border-left: 4px solid #10b981;
+  background-color: #ffffff;
+  border-radius: 6px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.response-header {
+  margin-bottom: 6px;
+}
+
+.response-title {
+  font-weight: 600;
+  color: #059669;
+  font-size: 13px;
+}
+
+.response-body {
+  white-space: pre-wrap;
+  font-size: 13px;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.response-files {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Красивый статус "Отвечено" */
+.status-answered {
+  color: #059669;
+  font-weight: 600;
+  font-size: 13px;
+  background-color: #ecfdf5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+  display: inline-block;
+}
