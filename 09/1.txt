@@ -1,0 +1,31 @@
+<!-- 2. НОВАЯ СТРОКА: Вывод ответа прямо под запросом -->
+    <tr v-if="inquiry.response">
+      <td colspan="9" style="background-color: #f8f9fa; padding: 12px 20px; border-bottom: 2px solid #e9ecef;">
+        <div style="border-left: 4px solid #198754; padding-left: 12px; text-align: left;">
+          
+          <div style="font-weight: bold; color: #198754; margin-bottom: 4px; font-size: 13px;">
+            💬 Ответ на запрос:
+          </div>
+
+          <!-- Текст ответа -->
+          <div style="white-space: pre-wrap; font-size: 13px; color: #212529;">
+            {{ inquiry.response.description }}
+          </div>
+
+          <!-- Прикреплённые файлы ответа -->
+          <div v-if="inquiry.response.files && inquiry.response.files.length > 0" class="files-container style="margin-top: 8px;">
+            <button 
+              v-for="file in inquiry.response.files" 
+              :key="file.id || file.name" 
+              class="btn-file-download" 
+              :title="'Скачать ' + file.name" 
+              @click="downloadAttachment(file)"
+            >
+              <i class="icon-file"></i>
+              <span class="file-name">{{ file.name }}</span>
+            </button>
+          </div>
+
+        </div>
+      </td>
+    </tr>
