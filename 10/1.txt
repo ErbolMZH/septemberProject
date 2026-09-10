@@ -1,0 +1,49 @@
+CREATE TABLE IF NOT EXISTS incidents (
+    id SERIAL PRIMARY KEY,
+    subject_id INT, -- ИЛИ VARCHAR(100), в зависимости от того, какой тип id в корне JSON
+    source_json_id INT, -- ID строки из таблицы json_subject (для связи с БД)
+    incident_id VARCHAR(100),
+    related_organizations TEXT[],
+    author_organization TEXT,
+    status VARCHAR(100),
+    resolution_status VARCHAR(100),
+    creation_date TIMESTAMPTZ
+);
+
+INSERT INTO incidents (
+    subject_id,
+    source_json_id,
+    incident_id,
+    related_organizations,
+    author_organization,
+    status,
+    resolution_status,
+    creation_date
+)
+SELECT 
+    -- Извлекаем id из корня JSON (если там число, приводим к ::int)
+    (js.json_::jsonb->>'id')::INT AS subject_id,
+    js.id AS source_json_id, -- Первичный ключ самой таблицы json_subject
+    
+    inc.val->>'incidentId' AS incident_id,
+    
+    -- Преобразуем JSON-массив организаций в SQL-массив text[]
+    ARRAY(
+        SELECT jsonb_array_elements_text(inc.val->'relatedOrganization')
+    ) AS related_organizations,
+    
+    inc.val->>'authorOrganization' AS author_organization,
+    inc.val->>'status' AS status,
+    inc.val->>'resolutionStatus' AS resolution_status,
+    (inc.val->>'creationDate')::TIMESTAMPTZ AS creation_date
+FROM 
+    json_subject js,
+    LATERAL jsonb_array_elements(
+        CASE 
+            WHEN jsonb_typeof(js.json_::jsonb->'incidents') = 'array' 
+            THEN js.json_::jsonb->'incidents' 
+            ELSE '[]'::jsonb 
+        END
+    ) AS inc(val)
+WHERE 
+    js.json_::jsonb ? 'incidents';
