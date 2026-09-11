@@ -1,0 +1,45 @@
+FOR dat_inc IN
+    SELECT d.*
+    FROM JSON_TABLE(
+        dat.json_::jsonb,                  -- Переменная/колонка с твоим JSON (например, dat.json_ или v_json)
+        '$.incidents[*]'
+        COLUMNS (
+             incident_id           text        PATH '$.incidentId'
+            ,author_organization   text        PATH '$.authorOrganization'
+            ,status                text        PATH '$.status'
+            ,resolution_status     text        PATH '$.resolutionStatus'
+            ,creation_date         timestamp   PATH '$.creationDate'
+            ,related_orgs_json     jsonb       PATH '$.relatedOrganization'
+        )
+    ) d
+LOOP
+    INSERT INTO public.incidents (
+         subject_id
+        ,source_json_id
+        ,incident_id
+        ,related_organizations
+        ,author_organization
+        ,status
+        ,resolution_status
+        ,creation_date
+    ) VALUES (
+         v_id_JSON_TABLE                                              -- Твой UUID субъекта (корневой id)
+        ,dat.id                                                       -- ID исходной записи из json_subject
+        ,dat_inc.incident_id
+        ,ARRAY(SELECT jsonb_array_elements_text(dat_inc.related_orgs_json)) -- Раскладываем в text[]
+        ,dat_inc.author_organization
+        ,dat_inc.status
+        ,dat_inc.resolution_status
+        ,dat_inc.creation_date
+    )
+    ON CONFLICT (incident_id) -- Или по PK (например, ID), если есть конфликт
+    DO UPDATE SET
+         subject_id            = v_id_JSON_TABLE
+        ,source_json_id        = dat.id
+        ,related_organizations = ARRAY(SELECT jsonb_array_elements_text(dat_inc.related_orgs_json))
+        ,author_organization   = dat_inc.author_organization
+        ,status                = dat_inc.status
+        ,resolution_status     = dat_inc.resolution_status
+        ,creation_date         = dat_inc.creation_date
+    ;
+END LOOP;
