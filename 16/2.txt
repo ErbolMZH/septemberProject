@@ -1,0 +1,79 @@
+// DTO для транзакций инцидента
+type TransactionDTO struct {
+	PaymentID      string          `json:"payment_id"`
+	Type           string          `json:"type"`
+	Status         string          `json:"status"`
+	Currency       string          `json:"currency"`
+	TransactionRRN string          `json:"transactionRrn"`
+	Date           string          `json:"date"`
+	Amount         int64           `json:"amount"`
+	Attachments    []AttachmentDTO `json:"attachments"`
+	Sender         ParticipantDTO  `json:"sender"`
+	Receiver       ParticipantDTO  `json:"receiver"`
+}
+
+type AttachmentDTO struct {
+	DocType string              `json:"docType"`
+	Files   []AttachmentFileDTO `json:"files"`
+}
+
+type AttachmentFileDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type ParticipantDTO struct {
+	Type                 string             `json:"type"`
+	IncidentRole         string             `json:"incident_role"`
+	IdentificationNumber string             `json:"identification_number"`
+	Country              string             `json:"country"`
+	Account              *AccountDTO        `json:"account"`
+	AccountForeign       *AccountForeignDTO `json:"account_foreign"`
+	CardMask             *CardMaskDTO       `json:"card_mask"`
+	PhoneNumber          *PhoneNumberDTO    `json:"phone_number"`
+	Info                 *PersonInfoDTO     `json:"info"`
+	Wallet               *WalletDTO         `json:"wallet"`
+	PaymentPoint         *PaymentPointDTO   `json:"paymentPoint"`
+}
+
+type AccountDTO struct {
+	IBAN            string   `json:"iban"`
+	IssuerBIN       string   `json:"issuer_bin"`
+	AccountCurrency *string  `json:"account_currency"`
+	AccountStatus   *string  `json:"account_status"`
+	AccountBalance  *float64 `json:"account_balance"`
+}
+
+type AccountForeignDTO struct {
+	IBAN             string `json:"iban"`
+	IssuerBIN        string `json:"issuer_bin"`
+	IsForeignAccount bool   `json:"isForeignAccount"`
+}
+
+type CardMaskDTO struct {
+	CardNumber string `json:"card_number"`
+	IssuerBIN  string `json:"issuer_bin"`
+}
+
+type PhoneNumberDTO struct {
+	Number string `json:"number"`
+}
+
+type PersonInfoDTO struct {
+	Name       string  `json:"name"`
+	Surname    string  `json:"surname"`
+	Patronymic string  `json:"patronymic"`
+	Gender     *string `json:"gender"`
+	OriginDate string  `json:"origin_date"`
+}
+
+type WalletDTO struct {
+	Number    string `json:"number"`
+	IssuerBIN string `json:"issuer_bin"`
+}
+
+type PaymentPointDTO struct {
+	Number    string `json:"number"`
+	Address   string `json:"address"`
+	IssuerBIN string `json:"issuer_bin"`
+}
