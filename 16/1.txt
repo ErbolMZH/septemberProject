@@ -1,0 +1,254 @@
+package handlers
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/labstack/echo/v4"
+)
+
+// InsertIncidentTransactionsRawTarget сохраняет созданные транзакции и их статус в БД
+func InsertIncidentTransactionsRawTarget(body []byte, status int, incidentID string) error {
+	q := `INSERT INTO inquiries_json(json_, status, incident_id) VALUES($1, $2, $3);`
+	_, err := pg.DB().Exec(q, body, status, incidentID)
+	if err != nil {
+		logger.Log("ERROR", "InsertIncidentTransactionsRawTarget", incidentID, fmt.Sprintf("failed to insert transactions JSON: %s", err), nil)
+		return fmt.Errorf("failed to insert raw transactions JSON: %w", err)
+	}
+
+	callProceduryQuery := `CALL public.p_prc_inquiries_json();`
+	_, err = pg.DB().Exec(callProceduryQuery)
+	if err != nil {
+		logger.Log("ERROR", "InsertIncidentTransactionsRawTarget", incidentID, fmt.Sprintf("failed to execute p_prc_inquiries_json(): %s", err), nil)
+		return fmt.Errorf("failed to execute p_prc_inquiries_json(): %w", err)
+	}
+
+	return nil
+}
+
+// POST /api/v1/incidents/:id/transactions
+func AFCreateTransactionsHandler(c echo.Context) error {
+	incidentID := c.Param("id")
+	if incidentID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Incident ID is required"})
+	}
+
+	// 1. Читаем входящий JSON-массив транзакций из тела запроса
+	var transactions []TransactionDTO
+	if err := c.Bind(&transactions); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid JSON format: " + err.Error()})
+	}
+
+	if len(transactions) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Transaction list cannot be empty"})
+	}
+
+	// 2. Проверка и обновление токена авторизации
+	authData, _ := model.AFGetAuthStruct()
+	if int(time.Since(authData.CreatedAt).Seconds()) >= authData.RefreshExpiresIn {
+		var err error
+		authData, _, err = model.AFAuth("create_transactions token expired")
+		if err != nil {
+			logger.Log("ERROR", "create_transactions_handler", incidentID, "AFAuth fiasco", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Authentication failed"})
+		}
+	}
+	model.AFGlobalAuthData = authData
+
+	baseURL := strings.TrimRight(comps.Config.AF.APIURL, "/")
+
+	// 3. Сериализуем данные обратно в JSON для отправки во внешний сервис и сохранения
+	jsonPayload, err := json.Marshal(transactions)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to prepare transactions payload"})
+	}
+
+	// 4. Отправляем запрос во внешний сервис
+	targetURL := fmt.Sprintf("%s/external/v1/incidents/%s/transactions", baseURL, incidentID)
+	body, status, err := sendPostInquiry(targetURL, jsonPayload, authData.AccessToken)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to connect to external service"})
+	}
+
+	if status == http.StatusUnauthorized {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Unauthorized in external service"})
+	}
+
+	// 5. Сохранение сырого ответа/запроса в БД при успешной отправке (2xx)
+	if status >= 200 && status < 300 {
+		if errRaw := InsertIncidentTransactionsRawTarget(jsonPayload, status, incidentID); errRaw != nil {
+			logger.Log("ERROR", "create_transactions_handler", incidentID, fmt.Sprintf("Save transactions to DB failed: %v", errRaw), errRaw)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to save transaction data locally"})
+		}
+
+		return c.JSON(status, echo.Map{
+			"message": "Transactions sent and saved successfully",
+			"status":  status,
+		})
+	}
+
+	return c.JSON(status, echo.Map{
+		"error":   "External service error",
+		"status":  status,
+		"details": string(body),
+	})
+}
+
+
+async sendTransactions(incidentId, transactionsPayload) {
+  try {
+    const response = await axios.post(
+      `/api/v1/incidents/${incidentId}/transactions`, 
+      transactionsPayload, 
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('Транзакции успешно созданы:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при создании транзакций:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+
+<!-- Модальное окно создания транзакций -->
+<div v-if="showTransactionModal" class="modal-backdrop" @click.self="closeTransactionModal">
+  <div class="modal-card1 modal-large">
+    <div class="modal-header">
+      <h3>Добавить транзакции к инциденту</h3>
+      <button class="btn-close" @click="closeTransactionModal">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Блок ошибок -->
+      <div v-if="transactionError" class="alert alert-danger mb10">
+        {{ transactionError }}
+      </div>
+
+      <!-- Ввод JSON с валидацией или загрузка из файла -->
+      <div class="form-group">
+        <label>Вставьте JSON массив транзакций:</label>
+        <textarea 
+          v-model="rawTransactionJson" 
+          class="form-control code-textarea" 
+          rows="12" 
+          placeholder='[&#10;  {&#10;    "payment_id": "12345",&#10;    "type": "TOPEWP",&#10;    "amount": 10000,&#10;    "sender": { ... },&#10;    "receiver": { ... }&#10;  }&#10;]'
+        ></textarea>
+      </div>
+
+      <div class="form-group mt10">
+        <label>Или загрузите файл с JSON:</label>
+        <input 
+          type="file" 
+          accept=".json" 
+          @change="handleJsonFileUpload" 
+          class="form-control" 
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer mt15">
+      <button 
+        class="btn btn-secondary" 
+        @click="closeTransactionModal" 
+        :disabled="isSubmittingTransaction"
+      >
+        Отмена
+      </button>
+      <button 
+        class="btn btn-primary" 
+        @click="submitTransactions" 
+        :disabled="isSubmittingTransaction || !rawTransactionJson.trim()"
+      >
+        {{ isSubmittingTransaction ? 'Отправка...' : 'Отправить транзакции' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+data() {
+  return {
+    showTransactionModal: false,
+    isSubmittingTransaction: false,
+    transactionError: null,
+    rawTransactionJson: '',
+    incidentId: '', // ID текущего инцидента
+  };
+},
+methods: {
+  openTransactionModal(incidentId) {
+    this.incidentId = incidentId;
+    this.rawTransactionJson = '';
+    this.transactionError = null;
+    this.showTransactionModal = true;
+  },
+
+  closeTransactionModal() {
+    if (this.isSubmittingTransaction) return;
+    this.showTransactionModal = false;
+    this.transactionError = null;
+    this.rawTransactionJson = '';
+  },
+
+  // Загрузка JSON напрямую из файла
+  handleJsonFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.rawTransactionJson = e.target.result;
+    };
+    reader.onerror = () => {
+      this.transactionError = 'Ошибка чтения файла';
+    };
+    reader.readAsText(file);
+  },
+
+  // Отправка на бэкенд (POST /api/v1/incidents/:id/transactions)
+  async submitTransactions() {
+    this.transactionError = null;
+
+    let parsedPayload;
+    try {
+      parsedPayload = JSON.parse(this.rawTransactionJson);
+      if (!Array.isArray(parsedPayload)) {
+        // Если передан единичный объект, оборачиваем в массив
+        parsedPayload = [parsedPayload];
+      }
+    } catch (e) {
+      this.transactionError = 'Невалидный JSON формат. Проверьте синтаксис.';
+      return;
+    }
+
+    this.isSubmittingTransaction = true;
+
+    try {
+      const response = await axios.post(
+        `/api/v1/incidents/${this.incidentId}/transactions`,
+        parsedPayload,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('Транзакции успешно отправлены:', response.data);
+      this.closeTransactionModal();
+      // Вызов родительского обновления данных (например, this.fetchIncidentDetails())
+    } catch (error) {
+      this.transactionError = error.response?.data?.error || 'Ошибка при отправке транзакций на сервер';
+    } finally {
+      this.isSubmittingTransaction = false;
+    }
+  }
+}
