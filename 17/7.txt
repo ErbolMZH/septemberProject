@@ -1,0 +1,209 @@
+/* Сетка для блоков отправителя и получателя */
+.custom-form-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.custom-form-card {
+  flex: 1;
+  min-width: 300px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.custom-form-card-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  color: #64b5f6;
+}
+
+.custom-form-card-title.receiver {
+  color: #e57373;
+}
+
+
+template: `
+  <!-- Возвращаем родные классы "container mattblock", добавляем класс-фикс "form-page-override" -->
+  <div class="container mattblock form-page-override" style="padding: 20px; width: 100%;">
+    
+    <!-- Шапка страницы -->
+    <div class="container-header mb20">
+      <div class="toolbar display-flex align-items-center">
+        <button class="bpb mr15" type="button" @click="goBack">
+          <i class="arrow rotate-135"></i> Назад
+        </button>
+        <h3 class="m0" style="font-size: 18px; font-weight: bold; color: #fff;">
+          Создание транзакции по инциденту #{{ incidentId }}
+        </h3>
+      </div>
+    </div>
+
+    <div v-if="errorMessage" class="alert alert-danger mb15">
+      {{ errorMessage }}
+    </div>
+
+    <form @submit.prevent="submitTransaction">
+
+      <!-- БЛОК 1: ОСНОВНАЯ ИНФОРМАЦИЯ -->
+      <div class="custom-form-card mb20">
+        <div class="custom-form-card-title" style="color: #fff;">
+          Основная информация
+        </div>
+        
+        <div class="row">
+          <div class="col-md-3 col-sm-6 form-group mb10">
+            <label>Payment ID *</label>
+            <input v-model="form.payment_id" type="text" class="form-control" required placeholder="12312321312312" />
+          </div>
+          <div class="col-md-3 col-sm-6 form-group mb10">
+            <label>Тип *</label>
+            <input v-model="form.type" type="text" class="form-control" required placeholder="TOPEWP" />
+          </div>
+          <div class="col-md-3 col-sm-6 form-group mb10">
+            <label>Статус *</label>
+            <input v-model="form.status" type="text" class="form-control" required placeholder="A" />
+          </div>
+          <div class="col-md-3 col-sm-6 form-group mb10">
+            <label>Валюта (код) *</label>
+            <input v-model="form.currency" type="text" class="form-control" required placeholder="398" />
+          </div>
+        </div>
+
+        <div class="row style-mt10">
+          <div class="col-md-4 form-group mb10">
+            <label>Сумма *</label>
+            <input v-model.number="form.amount" type="number" class="form-control" required placeholder="426670000" />
+          </div>
+          <div class="col-md-4 form-group mb10">
+            <label>Transaction RRN</label>
+            <input v-model="form.transactionRrn" type="text" class="form-control" placeholder="987189713123" />
+          </div>
+          <div class="col-md-4 form-group mb10">
+            <label>Дата и время</label>
+            <input v-model="form.date" type="text" class="form-control" placeholder="2026-09-17T10:09:19.897Z" />
+          </div>
+        </div>
+      </div>
+
+      <!-- БЛОКИ 2 И 3: ОТПРАВИТЕЛЬ И ПОЛУЧАТЕЛЬ -->
+      <div class="custom-form-grid">
+
+        <!-- ОТПРАВИТЕЛЬ -->
+        <div class="custom-form-card">
+          <div class="custom-form-card-title">
+            Отправитель
+          </div>
+
+          <div class="form-group mb10">
+            <label>ИИН / БИН отправителя</label>
+            <input v-model="form.sender.identification_number" type="text" class="form-control" />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group mb10">
+              <label>Телефон</label>
+              <input v-model="form.sender.phone_number.number" type="text" class="form-control" placeholder="+72341242142" />
+            </div>
+            <div class="col-md-6 form-group mb10">
+              <label>Роль в инциденте</label>
+              <input v-model="form.sender.incident_role" type="text" class="form-control" placeholder="victim" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group mb10">
+              <label>Имя</label>
+              <input v-model="form.sender.info.name" type="text" class="form-control" />
+            </div>
+            <div class="col-md-4 form-group mb10">
+              <label>Фамилия</label>
+              <input v-model="form.sender.info.surname" type="text" class="form-control" />
+            </div>
+            <div class="col-md-4 form-group mb10">
+              <label>Отчество</label>
+              <input v-model="form.sender.info.patronymic" type="text" class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group mb10">
+            <label>IBAN счет</label>
+            <input v-model="form.sender.account.iban" type="text" class="form-control" placeholder="12C3C12D3CFR24CF34R34C523" />
+          </div>
+
+          <div class="form-group mb10">
+            <label>БИН банка-эмитента</label>
+            <input v-model="form.sender.account.issuer_bin" type="text" class="form-control" placeholder="930140000323" />
+          </div>
+        </div>
+
+        <!-- ПОЛУЧАТЕЛЬ -->
+        <div class="custom-form-card">
+          <div class="custom-form-card-title receiver">
+            Получатель
+          </div>
+
+          <div class="form-group mb10">
+            <label>ИИН / БИН получателя</label>
+            <input v-model="form.receiver.identification_number" type="text" class="form-control" />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group mb10">
+              <label>Телефон</label>
+              <input v-model="form.receiver.phone_number.number" type="text" class="form-control" placeholder="+71234241242" />
+            </div>
+            <div class="col-md-6 form-group mb10">
+              <label>Роль в инциденте</label>
+              <input v-model="form.receiver.incident_role" type="text" class="form-control" placeholder="suspect" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group mb10">
+              <label>Имя</label>
+              <input v-model="form.receiver.info.name" type="text" class="form-control" />
+            </div>
+            <div class="col-md-4 form-group mb10">
+              <label>Фамилия</label>
+              <input v-model="form.receiver.info.surname" type="text" class="form-control" />
+            </div>
+            <div class="col-md-4 form-group mb10">
+              <label>Отчество</label>
+              <input v-model="form.receiver.info.patronymic" type="text" class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group mb10">
+            <label>IBAN счет</label>
+            <input v-model="form.receiver.account.iban" type="text" class="form-control" placeholder="12C3C12D3CFR24CF34R34C523" />
+          </div>
+
+          <div class="form-group mb10">
+            <label>БИН банка-эмитента</label>
+            <input v-model="form.receiver.account.issuer_bin" type="text" class="form-control" placeholder="930140000323" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- КНОПКИ -->
+      <div class="display-flex justify-content-end gap10 style-mt20" style="margin-top: 20px;">
+        <button type="button" class="btn btn-secondary mr10" @click="goBack" :disabled="isSubmitting">
+          Отмена
+        </button>
+        <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+          {{ isSubmitting ? 'Сохранение...' : 'Создать транзакцию' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+`
