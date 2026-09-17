@@ -1,0 +1,209 @@
+<!-- Модальное окно создания транзакции для менеджеров -->
+<div v-if="showTransactionModal" class="modal-backdrop" @click.self="closeTransactionModal">
+  <div class="modal-card1 modal-large">
+    <div class="modal-header">
+      <h3>Добавить транзакцию по инциденту</h3>
+      <button class="btn-close" @click="closeTransactionModal">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div v-if="transactionError" class="alert alert-danger mb10">
+        {{ transactionError }}
+      </div>
+
+      <!-- Основная информация о транзакции -->
+      <div class="row">
+        <div class="col-md-4 form-group">
+          <label>ID платежа (payment_id):</label>
+          <input v-model="form.payment_id" type="text" class="form-control" placeholder="12312321312312" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>Тип:</label>
+          <input v-model="form.type" type="text" class="form-control" placeholder="TOPEWP" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>Статус:</label>
+          <input v-model="form.status" type="text" class="form-control" placeholder="A" />
+        </div>
+      </div>
+
+      <div class="row mt10">
+        <div class="col-md-4 form-group">
+          <label>Сумма:</label>
+          <input v-model.number="form.amount" type="number" class="form-control" placeholder="0" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>Валюта (код):</label>
+          <input v-model="form.currency" type="text" class="form-control" placeholder="398" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>RRN транзакции:</label>
+          <input v-model="form.transactionRrn" type="text" class="form-control" placeholder="987189713123" />
+        </div>
+      </div>
+
+      <hr class="my15" />
+
+      <!-- Отправитель (Sender) -->
+      <h4>Отправитель (Sender)</h4>
+      <div class="row">
+        <div class="col-md-6 form-group">
+          <label>ИИН / БИН отправителя:</label>
+          <input v-model="form.sender.identification_number" type="text" class="form-control" />
+        </div>
+        <div class="col-md-6 form-group">
+          <label>Телефон:</label>
+          <input v-model="form.sender.phone_number.number" type="text" class="form-control" placeholder="+77001112233" />
+        </div>
+      </div>
+      <div class="row mt10">
+        <div class="col-md-4 form-group">
+          <label>Имя:</label>
+          <input v-model="form.sender.info.name" type="text" class="form-control" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>Фамилия:</label>
+          <input v-model="form.sender.info.surname" type="text" class="form-control" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>IBAN счет:</label>
+          <input v-model="form.sender.account.iban" type="text" class="form-control" />
+        </div>
+      </div>
+
+      <hr class="my15" />
+
+      <!-- Получатель (Receiver) -->
+      <h4>Получатель (Receiver)</h4>
+      <div class="row">
+        <div class="col-md-6 form-group">
+          <label>ИИН / БИН получателя:</label>
+          <input v-model="form.receiver.identification_number" type="text" class="form-control" />
+        </div>
+        <div class="col-md-6 form-group">
+          <label>Телефон:</label>
+          <input v-model="form.receiver.phone_number.number" type="text" class="form-control" placeholder="+77009998877" />
+        </div>
+      </div>
+      <div class="row mt10">
+        <div class="col-md-4 form-group">
+          <label>Имя:</label>
+          <input v-model="form.receiver.info.name" type="text" class="form-control" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>Фамилия:</label>
+          <input v-model="form.receiver.info.surname" type="text" class="form-control" />
+        </div>
+        <div class="col-md-4 form-group">
+          <label>IBAN счет:</label>
+          <input v-model="form.receiver.account.iban" type="text" class="form-control" />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer mt15">
+      <button class="btn btn-secondary" @click="closeTransactionModal" :disabled="isSubmittingTransaction">
+        Отмена
+      </button>
+      <button class="btn btn-primary" @click="submitTransactions" :disabled="isSubmittingTransaction">
+        {{ isSubmittingTransaction ? 'Отправка...' : 'Создать транзакцию' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+export default {
+  data() {
+    return {
+      showTransactionModal: false,
+      isSubmittingTransaction: false,
+      transactionError: null,
+      incidentId: null,
+
+      // Чистый объект формы для заполнения менеджером
+      form: this.getEmptyForm()
+    };
+  },
+  methods: {
+    getEmptyForm() {
+      return {
+        payment_id: '',
+        type: 'TOPEWP',
+        status: 'A',
+        currency: '398',
+        transactionRrn: '',
+        date: new Date().toISOString(),
+        amount: 0,
+        attachments: [],
+        sender: {
+          type: 'PERSON',
+          incident_role: 'victim',
+          identification_number: '',
+          country: '40',
+          account: { iban: '', issuer_bin: '', account_currency: null, account_balance: null },
+          account_foreign: null,
+          card_mask: null,
+          phone_number: { number: '' },
+          info: { name: '', surname: '', patronymic: '', gender: null, origin_date: '' },
+          wallet: null,
+          paymentPoint: null
+        },
+        receiver: {
+          type: 'PERSON',
+          incident_role: 'suspect',
+          identification_number: '',
+          country: '40',
+          account: { iban: '', issuer_bin: '', account_currency: null, account_balance: null },
+          account_foreign: null,
+          card_mask: null,
+          phone_number: { number: '' },
+          info: { name: '', surname: '', patronymic: '', gender: null, origin_date: '' },
+          wallet: null,
+          paymentPoint: null
+        }
+      };
+    },
+
+    openTransactionModal(incidentId) {
+      this.incidentId = incidentId;
+      this.form = this.getEmptyForm();
+      this.transactionError = null;
+      this.showTransactionModal = true;
+    },
+
+    closeTransactionModal() {
+      if (this.isSubmittingTransaction) return;
+      this.showTransactionModal = false;
+      this.transactionError = null;
+    },
+
+    async submitTransactions() {
+      if (!this.form.payment_id || !this.form.amount) {
+        this.transactionError = 'Заполните обязательно Payment ID и сумму';
+        return;
+      }
+
+      this.isSubmittingTransaction = true;
+      this.transactionError = null;
+
+      // Оборачиваем введенный объект формы в массив перед отправкой
+      const payload = [this.form];
+
+      try {
+        const url = `/api/v1/incidents/${this.incidentId}/transactions`;
+        const response = await axios.post(url, payload, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        console.log('Транзакция успешно добавлена:', response.data);
+        this.closeTransactionModal();
+      } catch (error) {
+        this.transactionError = error.response?.data?.error || 'Ошибка при отправке данных';
+      } finally {
+        this.isSubmittingTransaction = false;
+      }
+    }
+  }
+};
