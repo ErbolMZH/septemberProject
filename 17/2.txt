@@ -1,0 +1,271 @@
+<template>
+  <div class="container-fluid page-wrapper">
+    <div class="card shadow-sm p15">
+      <!-- Шапка страницы -->
+      <div class="page-header display-flex justify-content-between align-items-center mb20">
+        <h3>Создание транзакции к инциденту #{{ incidentId }}</h3>
+        <button class="btn btn-secondary" @click="goBack" :disabled="isSubmitting">
+          &larr; Назад к инциденту
+        </button>
+      </div>
+
+      <!-- Блок ошибок -->
+      <div v-if="errorMessage" class="alert alert-danger mb15">
+        {{ errorMessage }}
+      </div>
+
+      <form @submit.prevent="submitTransaction">
+        <!-- Основные параметры -->
+        <div class="section-title">Основные данные платежа</div>
+        <div class="row">
+          <div class="col-md-3 form-group">
+            <label>Payment ID *</label>
+            <input v-model="form.payment_id" type="text" class="form-control" required placeholder="12312321312312" />
+          </div>
+          <div class="col-md-3 form-group">
+            <label>Тип *</label>
+            <input v-model="form.type" type="text" class="form-control" required placeholder="TOPEWP" />
+          </div>
+          <div class="col-md-3 form-group">
+            <label>Статус *</label>
+            <input v-model="form.status" type="text" class="form-control" required placeholder="A" />
+          </div>
+          <div class="col-md-3 form-group">
+            <label>Валюта (код) *</label>
+            <input v-model="form.currency" type="text" class="form-control" required placeholder="398" />
+          </div>
+        </div>
+
+        <div class="row mt10">
+          <div class="col-md-4 form-group">
+            <label>Сумма *</label>
+            <input v-model.number="form.amount" type="number" class="form-control" required placeholder="426670000" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Transaction RRN</label>
+            <input v-model="form.transactionRrn" type="text" class="form-control" placeholder="987189713123" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Дата и время</label>
+            <input v-model="form.date" type="text" class="form-control" placeholder="2026-04-02T12:34:00+05:00" />
+          </div>
+        </div>
+
+        <hr class="my20" />
+
+        <!-- Блок Отправителя -->
+        <div class="section-title">Отправитель (Sender)</div>
+        <div class="row">
+          <div class="col-md-4 form-group">
+            <label>ИИН / БИН отправителя</label>
+            <input v-model="form.sender.identification_number" type="text" class="form-control" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Телефон</label>
+            <input v-model="form.sender.phone_number.number" type="text" class="form-control" placeholder="+72341242142" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Роль в инциденте</label>
+            <input v-model="form.sender.incident_role" type="text" class="form-control" placeholder="victim" />
+          </div>
+        </div>
+
+        <div class="row mt10">
+          <div class="col-md-4 form-group">
+            <label>Имя</label>
+            <input v-model="form.sender.info.name" type="text" class="form-control" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Фамилия</label>
+            <input v-model="form.sender.info.surname" type="text" class="form-control" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Отчество</label>
+            <input v-model="form.sender.info.patronymic" type="text" class="form-control" />
+          </div>
+        </div>
+
+        <div class="row mt10">
+          <div class="col-md-6 form-group">
+            <label>IBAN счет</label>
+            <input v-model="form.sender.account.iban" type="text" class="form-control" placeholder="12C3C12D3CFR24CF34R34C523" />
+          </div>
+          <div class="col-md-6 form-group">
+            <label>БИН банка-эмитента</label>
+            <input v-model="form.sender.account.issuer_bin" type="text" class="form-control" placeholder="930140000323" />
+          </div>
+        </div>
+
+        <hr class="my20" />
+
+        <!-- Блок Получателя -->
+        <div class="section-title">Получатель (Receiver)</div>
+        <div class="row">
+          <div class="col-md-4 form-group">
+            <label>ИИН / БИН получателя</label>
+            <input v-model="form.receiver.identification_number" type="text" class="form-control" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Телефон</label>
+            <input v-model="form.receiver.phone_number.number" type="text" class="form-control" placeholder="+71234241242" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Роль в инциденте</label>
+            <input v-model="form.receiver.incident_role" type="text" class="form-control" placeholder="suspect" />
+          </div>
+        </div>
+
+        <div class="row mt10">
+          <div class="col-md-4 form-group">
+            <label>Имя</label>
+            <input v-model="form.receiver.info.name" type="text" class="form-control" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Фамилия</label>
+            <input v-model="form.receiver.info.surname" type="text" class="form-control" />
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Отчество</label>
+            <input v-model="form.receiver.info.patronymic" type="text" class="form-control" />
+          </div>
+        </div>
+
+        <div class="row mt10">
+          <div class="col-md-6 form-group">
+            <label>IBAN счет</label>
+            <input v-model="form.receiver.account.iban" type="text" class="form-control" placeholder="12C3C12D3CFR24CF34R34C523" />
+          </div>
+          <div class="col-md-6 form-group">
+            <label>БИН банка-эмитента</label>
+            <input v-model="form.receiver.account.issuer_bin" type="text" class="form-control" placeholder="930140000323" />
+          </div>
+        </div>
+
+        <!-- Кнопки управления -->
+        <div class="footer-actions mt30 display-flex justify-content-end gap10">
+          <button type="button" class="btn btn-secondary" @click="goBack" :disabled="isSubmitting">
+            Отмена
+          </button>
+          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Сохранение...' : 'Создать транзакцию' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  name: 'CreateTransaction',
+  data() {
+    return {
+      incidentId: this.$route.params.id,
+      isSubmitting: false,
+      errorMessage: null,
+      
+      form: {
+        payment_id: '',
+        type: 'TOPEWP',
+        status: 'A',
+        currency: '398',
+        transactionRrn: '',
+        date: new Date().toISOString(),
+        amount: 0,
+        attachments: [],
+        sender: {
+          type: 'PERSON',
+          incident_role: 'victim',
+          identification_number: '',
+          country: '40',
+          account: { iban: '', issuer_bin: '', account_currency: null, account_balance: null },
+          account_foreign: null,
+          card_mask: null,
+          phone_number: { number: '' },
+          info: { name: '', surname: '', patronymic: '', gender: null, origin_date: '' },
+          wallet: null,
+          paymentPoint: null
+        },
+        receiver: {
+          type: 'PERSON',
+          incident_role: 'suspect',
+          identification_number: '',
+          country: '40',
+          account: { iban: '', issuer_bin: '', account_currency: null, account_balance: null },
+          account_foreign: null,
+          card_mask: null,
+          phone_number: { number: '' },
+          info: { name: '', surname: '', patronymic: '', gender: null, origin_date: '' },
+          wallet: null,
+          paymentPoint: null
+        }
+      }
+    };
+  },
+  methods: {
+    // Возврат назад при кнопке "Отмена" или "Назад"
+    goBack() {
+      this.$router.push({
+        name: 'IncidentDetails',
+        params: { id: this.incidentId }
+      });
+    },
+
+    // Отправка формы и переход назад после успешного ответа
+    async submitTransaction() {
+      this.isSubmitting = true;
+      this.errorMessage = null;
+
+      try {
+        // Оборачиваем сформированную транзакцию в JSON-массив
+        const payload = [this.form];
+
+        await axios.post(`/api/v1/incidents/${this.incidentId}/transactions`, payload, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        // После успешного создания возвращаем менеджера на страницу инцидента
+        this.goBack();
+      } catch (error) {
+        this.errorMessage = error.response?.data?.error || 'Ошибка при сохранении транзакции';
+      } finally {
+        this.isSubmitting = false;
+      }
+    }
+  }
+};
+</script>
+
+<style scoped>
+.page-wrapper {
+  padding: 20px;
+}
+
+.section-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.my20 {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.mt30 {
+  margin-top: 30px;
+}
+</style>
