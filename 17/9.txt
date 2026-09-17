@@ -1,0 +1,79 @@
+CREATE TABLE IF NOT EXISTS directory_json (
+    id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    json_       JSONB NOT NULL,
+    status      INT NOT NULL,
+    ref_type    VARCHAR(255) NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+
+func InsertDirectoryRawTarget(body []byte, status int, refType string) error {
+	q := `INSERT INTO directory_json(json_, status, ref_type) VALUES($1, $2, $3);`
+	err := pg.DB().Exec(q, body, status, refType)
+	if err != nil {
+		logger.Log("ERROR", "InsertDirectoryRawTarget", "", fmt.Sprintf("failed to insert raw directory JSON: %w", err), nil)
+		return fmt.Errorf("failed to insert raw directory JSON: %w", err)
+	}
+	return nil
+}
+
+
+func main() {
+	var (
+		err error
+	)
+
+	flag.Parse()
+	log.Printf("type: %s", *refType)
+
+	if len(*refType) == 0 {
+		logger.Log("WARN", "tar_directory.go", "NULL", "tar_directory.go > type is null", nil)
+		os.Exit(1)
+	}
+
+	comps.LoadConfiguration("../config.json")
+	authData, _ := model.AFGetAuthStruct()
+	secAfterTokenCreation := int(time.Since(authData.CreatedAt).Seconds())
+
+	if secAfterTokenCreation > authData.RefreshExpiresIn {
+		authData, err = model.AFAuth("tar_directory token expired")
+		if err != nil {
+			logger.Log("ERROR", "tar_directory.go", "null", fmt.Sprintf("tar_directory.go > AFAuth fiasco: %s", err), err)
+			os.Exit(1)
+		}
+	}
+
+	model.AFGlobalAuthData = authData
+
+	// Формируем URL для получения справочника по типу
+	url := fmt.Sprintf("%s/external/directory/v1/refernces/?type=%s", comps.Config.AF.APIURL, *refType)
+
+	body, status, err := model.AFRequestPlain("GET", url, "AFDirectory", authData.AccessToken)
+	if err != nil {
+		logger.Log("ERROR", "tar_directory.go", "null", fmt.Sprintf("tar_directory.go > AFRequestPlain directory fiasco: %s", err), err)
+		os.Exit(1)
+	}
+
+	if status == 401 {
+		logger.Log("ERROR", "tar_directory.go", "null", fmt.Sprintf("tar_directory.go > AFRequestPlain directory fiasco: %s", err), err)
+		os.Exit(1)
+	}
+
+	if status != 404 && status != 403 {
+		if len(body) > 0 {
+			if len(string(body)) > 0 {
+				log.Println("[Tar 1 Начинаем InsertDirectoryRawTarget... ]")
+				errRaw := InsertDirectoryRawTarget(body, 1, *refType)
+				if errRaw != nil {
+					logger.Log("ERROR", "tar_directory.go", "", fmt.Sprintf("InsertDirectoryRawTarget fiasco: %s", errRaw), errRaw)
+				}
+				log.Println("[DEBUG] STEP 1: Successfully ended!")
+			}
+		}
+	} else {
+		logger.Log("INFO", "tar_directory.go", "STATUS", fmt.Sprintf("status = %d", status), nil)
+	}
+
+	log.Println("Work is ended")
+	os.Exit(0)
+}
