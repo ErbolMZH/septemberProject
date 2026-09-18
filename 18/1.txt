@@ -1,0 +1,89 @@
+package handlers
+
+import (
+	"database/sql"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+)
+
+type RefHandler struct {
+	DB *sql.DB
+}
+
+func NewRefHandler(db *sql.DB) *RefHandler {
+	return &RefHandler{DB: db}
+}
+
+// GetRefsByScheme возвращает список справочников из таблицы refs
+func (h *RefHandler) GetRefsByScheme(c echo.Context) error {
+	refType := c.QueryParam("type")
+	if refType == "" {
+		refType = "FRAUD_SCHEME" // Дефолтное значение
+	}
+
+	// SQL-запрос для получения name_ru и code
+	query := `
+		SELECT code, name_ru 
+		FROM refs 
+		WHERE type = $1
+		ORDER BY id ASC
+	`
+
+	rows, err := h.DB.QueryContext(c.Request().Context(), query, refType)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to fetch references: " + err.Error(),
+		})
+	}
+	defer rows.Close()
+
+	refs := make([]RefResponse, 0)
+
+	for rows.Next() {
+		var item RefResponse
+		if err := rows.Scan(&item.Code, &item.NameRU); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Error scanning row: " + err.Error(),
+			})
+		}
+		refs = append(refs, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Rows iteration error: " + err.Error(),
+		})
+	}
+
+	// Отдаем JSON массив [{ "code": "...", "name_ru": "..." }]
+	return c.JSON(http.StatusOK, refs)
+}
+
+
+
+<!-- Первое поле: Схема мошенничества -->
+            <div class="row mb10">
+              <div class="col-md-6 form-group">
+                <label>Схема мошенничества *</label>
+                <select v-model="form.fraud_scheme" class="form-control" required>
+                  <option value="" disabled selected>Выберите схему</option>
+                  <option 
+                    v-for="scheme in fraudSchemes" 
+                    :key="scheme.code" 
+                    :value="scheme.code"
+                  >
+                    {{ scheme.name_ru }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            async fetchFraudSchemes() {
+      try {
+        const response = await axios.get('/af/refs?type=FRAUD_SCHEME');
+        this.fraudSchemes = response.data || [];
+      } catch (err) {
+        console.error('Ошибка загрузки схем мошенничества:', err);
+      }
+    },
