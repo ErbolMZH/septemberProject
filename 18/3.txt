@@ -1,0 +1,16 @@
+<select 
+        id="transactionalChannel"
+        v-model="form.transactional_channel" 
+        class="form-control" 
+        required
+      >
+        <option value="" disabled selected>Выберите канал</option>
+        <option 
+          v-for="channel in transactionalChannels" 
+          :key="channel.code" 
+          :value="channel.code"
+        >
+          {{ channel.name_ru }}
+        </option>
+      </select>
+    </div>
