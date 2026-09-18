@@ -1,0 +1,13 @@
+<div class="col-md-4 form-group">
+    <label>Категория транзакции *</label>
+    <select v-model="form.transaction_category" class="form-control" required>
+      <option value="" disabled selected>Выберите категорию</option>
+      <option 
+        v-for="category in transactionCategories" 
+        :key="category.code" 
+        :value="category.code"
+      >
+        {{ category.name_ru }}
+      </option>
+    </select>
+  </div>
