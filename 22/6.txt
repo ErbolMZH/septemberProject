@@ -1,89 +1,51 @@
-<div class="row">
-  <!-- Поле 1: Клиент подтверждал транзакцию -->
-  <div class="col-md-6 mb-3">
-    <label class="form-label">Клиент подтверждал транзакцию *</label>
-    <select 
-      class="form-select" 
-      v-model="form.is_client_confirmed"
-      @change="onClientConfirmationChange"
-    >
-      <option :value="false">Не подтверждал</option>
-      <option :value="true">Подтверждал</option>
-    </select>
-  </div>
-
-  <!-- Поле 2: Способ подтверждения (Отображается ТОЛЬКО если клиент ПОДТВЕРЖДАЛ) -->
-  <div class="col-md-6 mb-3" v-if="form.is_client_confirmed">
-    <label class="form-label">Способ подтверждения *</label>
-    <select class="form-select" v-model="form.confirmation_method">
-      <option value="" disabled>Каким способом клиент подтвердил операцию</option>
-      <option 
-        v-for="item in confirmationMethods" 
-        :key="item.code" 
-        :value="item.code"
-      >
-        {{ item.name_ru || item.code }}
-      </option>
-    </select>
-  </div>
-
-  <!-- Поле 3: Подтверждение клиентом легитимности операции (Тоже ТОЛЬКО если клиент ПОДТВЕРЖДАЛ) -->
-  <div class="col-md-6 mb-3" v-if="form.is_client_confirmed">
-    <label class="form-label">Подтверждение клиентом легитимности операции *</label>
-    <select class="form-select" v-model="form.legitimacy_confirmation">
-      <option value="" disabled>Выберите значение</option>
-      <option 
-        v-for="opt in legitimacyOptions" 
-        :key="opt.code" 
-        :value="opt.code"
-      >
-        {{ opt.name }}
-      </option>
-    </select>
-  </div>
+<!-- Поле 1: Клиент подтверждал транзакцию -->
+<div class="col-md-12 form-group mb-3">
+  <label style="color: #fff;">Клиент подтверждал транзакцию *</label>
+  <select 
+    v-model="form.is_client_confirmed" 
+    class="form-control" 
+    @change="onClientConfirmationChange"
+    required
+  >
+    <option :value="false">Не подтверждал</option>
+    <option :value="true">Подтверждал</option>
+  </select>
 </div>
 
-data() {
-  return {
-    form: {
-      is_client_confirmed: false,
-      confirmation_method: '',
-      legitimacy_confirmation: ''
-    },
+<!-- Поле 2: Способ подтверждения (Отображается только если Подтверждал) -->
+<div class="col-md-12 form-group mb-3" v-if="form.is_client_confirmed">
+  <label style="color: #fff;">Способ подтверждения *</label>
+  <select 
+    v-model="form.confirmation_method" 
+    class="form-control" 
+    required
+  >
+    <option value="" disabled selected hidden>Каким способом клиент подтвердил операцию</option>
+    <option 
+      v-for="item in confirmationMethods" 
+      :key="item.code" 
+      :value="item.code"
+    >
+      {{ item.name_ru || item.code }}
+    </option>
+  </select>
+</div>
 
-    confirmationMethods: [],
-
-    legitimacyOptions: [
-      { code: 'CONFIRMED', name: 'Да (Операция совершена клиентом добровольно)' },
-      { code: 'NOT_APPLICABLE', name: 'Неприменимо (Контакт с клиентом не состоялся / не требуется)' },
-      { code: 'NOT_CONFIRMED', name: 'Нет (Операция не совершена клиентом)' }
-    ]
-  };
-},
-
-methods: {
-  async fetchConfirmationMethods() {
-    try {
-      const response = await axios.get('/incidents/refs?type=CONFIRMATION_METHOD');
-      const rawData = Array.isArray(response.data) 
-        ? response.data 
-        : (response.data && response.data.refs ? response.data.refs : []);
-
-      this.confirmationMethods = rawData;
-    } catch (err) {
-      console.error('Ошибка загрузки способов подтверждения:', err);
-      this.confirmationMethods = [];
-    }
-  },
-
-  onClientConfirmationChange() {
-    if (!this.form.is_client_confirmed) {
-      this.form.confirmation_method = '';
-      this.form.legitimacy_confirmation = '';
-    }
-  }
-},
-
-created() {
-  this.fetchConfirmationMethods();
-}
+<!-- Поле 3: Подтверждение легитимности (Отображается только если Подтверждал) -->
+<div class="col-md-12 form-group mb-3" v-if="form.is_client_confirmed">
+  <label style="color: #fff;">Подтверждение клиентом легитимности операции *</label>
+  <select 
+    v-model="form.legitimacy_confirmation" 
+    class="form-control" 
+    required
+  >
+    <option value="" disabled selected hidden>Выберите значение</option>
+    <option 
+      v-for="opt in legitimacyOptions" 
+      :key="opt.code" 
+      :value="opt.code"
+    >
+      {{ opt.name }}
+    </option>
+  </select>
+</div>
