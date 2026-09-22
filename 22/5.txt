@@ -66,3 +66,8 @@ onClientConfirmationChange() {
       this.form.confirmation_method = ''; // Сбрасываем способ подтверждения
     }
   }
+
+itimacyOptions: [
+      { code: 'CONFIRMED', name: 'Да (Операция совершена клиентом добровольно)' },
+      { code: 'NOT_APPLICABLE', name: 'Неприменимо (Контакт с клиентом не состоялся / не требуется)' },
+      { code: 'NOT_CONFIRMED', name: 'Нет (Операция не совершена клиентом)' }
