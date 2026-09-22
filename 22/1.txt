@@ -1,0 +1,31 @@
+<div class="col-md-4 form-group position-relative">
+  <label style="color: #fff;">Дата и время транзакции *</label>
+  <div class="custom-date-input" @click="openPicker">
+    <input 
+      ref="dateInput"
+      type="datetime-local" 
+      v-model="form.date" 
+      class="form-control dark-datetime-picker" 
+      required
+    />
+  </div>
+</div>
+
+methods: {
+  openPicker() {
+    // Вызывает всплывающий календарь браузера при клике на любое место поля
+    if (this.$refs.dateInput && this.$refs.dateInput.showPicker) {
+      this.$refs.dateInput.showPicker();
+    }
+  }
+}
+
+/* Кастомизация иконки календаря внутри инпута */
+.dark-datetime-picker::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* Делает иконку календаря белой */
+  cursor: pointer;
+}
+
+.custom-date-input {
+  cursor: pointer;
+}
