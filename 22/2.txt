@@ -1,0 +1,24 @@
+async fetchTransactionStatuses() {
+      try {
+        const response = await axios.get('/incidents/refs?type=TRANSACTION_STATUS');
+        const data = response.data || [];
+        this.transactionStatuses = Array.isArray(data) ? data : (data.data || []);
+      } catch (err) {
+        console.error('Ошибка загрузки статусов транзакции:', err);
+        this.transactionStatuses = [];
+      }
+    }
+  }
+<div class="col-md-4 form-group">
+  <label style="color: #fff;">Статус *</label>
+  <select v-model="form.status" class="form-control" required>
+    <option :value="''" disabled style="color: #888;">Выберите статус</option>
+    <option 
+      v-for="status in transactionStatuses" 
+      :key="status.code" 
+      :value="status.code"
+    >
+      {{ status.name_ru }}
+    </option>
+  </select>
+</div>
