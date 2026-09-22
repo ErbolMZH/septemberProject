@@ -1,0 +1,39 @@
+async fetchCurrencies() {
+    try {
+      const response = await axios.get('/incidents/refs?type=CURRENCY');
+      const data = Array.isArray(response.data) ? response.data : (response.data.data || []);
+
+      // Коды приоритетных валют в нужном порядке
+      const priorityCodes = ['398', '978', '840', '648'];
+
+      // Сортируем: приоритетные наверх, остальные ниже
+      this.currencies = data.sort((a, b) => {
+        const indexA = priorityCodes.indexOf(a.code);
+        const indexB = priorityCodes.indexOf(b.code);
+
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB; // Оба в приоритете — сохраняем порядок
+        if (indexA !== -1) return -1; // а в приоритете — наверх
+        if (indexB !== -1) return 1;  // b в приоритете — наверх
+
+        return a.name_ru.localeCompare(b.name_ru); // Остальные по алфавиту
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки валют:', err);
+      this.currencies = [];
+    }
+  }
+
+
+<div class="col-md-4 form-group">
+  <label style="color: #fff;">Валюта (код) *</label>
+  <select v-model="form.currency" class="form-control" required>
+    <option :value="''" disabled style="color: #888;">Выберите валюту</option>
+    <option 
+      v-for="curr in currencies" 
+      :key="curr.code" 
+      :value="curr.code"
+    >
+      {{ curr.code }} - {{ curr.name_ru }}
+    </option>
+  </select>
+</div>
