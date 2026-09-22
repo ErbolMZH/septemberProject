@@ -1,0 +1,145 @@
+<!-- Блок появится только если выбрана категория "Платеж" (PAYMENT) -->
+<div v-if="isPaymentCategory" class="payment-info-section mt-4">
+  <h5 class="section-title mb-3" style="color: #fff;">Информация о платеже</h5>
+  
+  <div class="form-grid-2col">
+    <!-- 1. Наименование мерчанта -->
+    <div class="form-group mb-3">
+      <label style="color: #fff;">Наименование мерчанта *</label>
+      <input 
+        type="text" 
+        v-model="form.merchant_name" 
+        class="form-control" 
+        placeholder="Введите наименование Мерчанта" 
+        :required="isPaymentCategory"
+      />
+    </div>
+
+    <!-- 2. ID мерчанта -->
+    <div class="form-group mb-3">
+      <label style="color: #fff;">ID мерчанта *</label>
+      <input 
+        type="text" 
+        v-model="form.merchant_id" 
+        class="form-control" 
+        placeholder="Введите ID Мерчанта" 
+        :required="isPaymentCategory"
+      />
+    </div>
+
+    <!-- 3. Код категории мерчанта (MCC) -->
+    <div class="form-group mb-3">
+      <label style="color: #fff;">Код категории мерчанта *</label>
+      <select 
+        v-model="form.mcc_code" 
+        class="form-control" 
+        :required="isPaymentCategory"
+      >
+        <option value="" disabled selected hidden>Выберите код категории</option>
+        <option 
+          v-for="item in mccCodes" 
+          :key="item.code" 
+          :value="item.code"
+        >
+          {{ item.code }} - {{ item.name_ru || item.name }}
+        </option>
+      </select>
+    </div>
+
+    <!-- 4. ID терминала -->
+    <div class="form-group mb-3">
+      <label style="color: #fff;">ID терминала *</label>
+      <input 
+        type="text" 
+        v-model="form.terminal_id" 
+        class="form-control" 
+        placeholder="Введите ID терминала" 
+        :required="isPaymentCategory"
+      />
+    </div>
+
+    <!-- 5. IP устройства -->
+    <div class="form-group mb-3">
+      <label style="color: #fff;">IP устройства *</label>
+      <input 
+        type="text" 
+        v-model="form.device_ip" 
+        class="form-control" 
+        placeholder="Введите IP устройства" 
+        :required="isPaymentCategory"
+      />
+    </div>
+  </div>
+</div>
+
+
+data() {
+  return {
+    form: {
+      // ... остальные поля
+      category: '', // Хранит выбранную категорию (например, 'PAYMENT' или 'Платеж')
+      
+      // Поля блока "Информация о платеже"
+      merchant_name: '',
+      merchant_id: '',
+      mcc_code: '',
+      terminal_id: '',
+      device_ip: ''
+    },
+
+    mccCodes: [], // Справочник MCC кодов
+  };
+},
+
+computed: {
+  // Проверяем, выбрана ли категория "Платеж"
+  // Замените 'PAYMENT' или 'Платеж' на то значение (code/value), которое приходит в вашем справочнике категорий
+  isPaymentCategory() {
+    return this.form.category === 'PAYMENT' || this.form.category === 'Платеж';
+  }
+},
+
+watch: {
+  // Сбрасываем значения мерчанта, если пользователь изменил категорию на другую
+  isPaymentCategory(newVal) {
+    if (!newVal) {
+      this.form.merchant_name = '';
+      this.form.merchant_id = '';
+      this.form.mcc_code = '';
+      this.form.terminal_id = '';
+      this.form.device_ip = '';
+    }
+  }
+},
+
+methods: {
+  // Если справочник MCC кодов загружается с бэкенда
+  async fetchMccCodes() {
+    try {
+      const response = await axios.get('/incidents/refs?type=MCC_CODE');
+      const rawData = Array.isArray(response.data) 
+        ? response.data 
+        : (response.data && response.data.refs ? response.data.refs : []);
+      this.mccCodes = rawData;
+    } catch (err) {
+      console.error('Ошибка загрузки MCC кодов:', err);
+      this.mccCodes = [];
+    }
+  }
+},
+
+created() {
+  this.fetchMccCodes();
+}
+
+
+.payment-info-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 20px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
