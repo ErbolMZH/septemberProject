@@ -1,0 +1,20 @@
+/* Явно задаем 2 равные колонки для десктопа */
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px 20px; /* Вертикальный и горизонтальный отступ между полями */
+  width: 100%;
+}
+
+/* На всякий случай, если ширина родительского элемента перебивает дочерние */
+.form-grid-2col .form-group {
+  width: 100% !important;
+  margin-bottom: 0 !important;
+}
+
+/* Мобильная адаптивность (если экран меньше 768px, сворачиваем в 1 колонку) */
+@media (max-width: 768px) {
+  .form-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
