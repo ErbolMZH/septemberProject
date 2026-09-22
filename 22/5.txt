@@ -1,0 +1,68 @@
+async fetchConfirmationMethods() {
+  try {
+    const response = await axios.get('/incidents/refs?type=CONFIRMATION_METHOD');
+    const rawData = Array.isArray(response.data) 
+      ? response.data 
+      : (response.data && response.data.refs ? response.data.refs : []);
+
+    this.confirmationMethods = rawData;
+  } catch (err) {
+    console.error('Ошибка загрузки способов подтверждения:', err);
+    this.confirmationMethods = [];
+  }
+}
+
+
+<div class="row">
+  <!-- Поле 1: Клиент подтверждал транзакцию -->
+  <div class="col-6 mb-3">
+    <label class="form-label">Клиент подтверждал транзакцию *</label>
+    <select 
+      class="form-select" 
+      v-model="form.is_client_confirmed"
+      @change="onClientConfirmationChange"
+    >
+      <option :value="false">Не подтверждал</option>
+      <option :value="true">Подтверждал</option>
+    </select>
+  </div>
+
+  <!-- Поле 3: Способ подтверждения (Открывается ТОЛЬКО если Подтверждал) -->
+  <div class="col-6 mb-3" v-if="form.is_client_confirmed">
+    <label class="form-label">Способ подтверждения *</label>
+    <select class="form-select" v-model="form.confirmation_method">
+      <option value="" disabled>Каким способом клиент подтвердил операцию</option>
+      <option 
+        v-for="item in confirmationMethods" 
+        :key="item.code" 
+        :value="item.code"
+      >
+        {{ item.name_ru || item.code }}
+      </option>
+    </select>
+  </div>
+</div>
+
+<!-- Поле 2: Подтверждение клиентом легитимности операции -->
+<div class="row">
+  <div class="col-12 mb-3">
+    <label class="form-label">Подтверждение клиентом легитимности операции *</label>
+    <select class="form-select" v-model="form.legitimacy_confirmation">
+      <option value="" disabled>Выберите значение</option>
+      <option 
+        v-for="opt in legitimacyOptions" 
+        :key="opt.code" 
+        :value="opt.code"
+      >
+        {{ opt.name }}
+      </option>
+    </select>
+  </div>
+</div>
+
+
+onClientConfirmationChange() {
+    if (!this.form.is_client_confirmed) {
+      this.form.confirmation_method = ''; // Сбрасываем способ подтверждения
+    }
+  }
