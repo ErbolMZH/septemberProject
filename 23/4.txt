@@ -1,0 +1,110 @@
+<div class="dynamic-sections-grid mt-3">
+
+    <!-- СЕКЦИЯ: Приостановление кредита (Левая колонка) -->
+    <div class="toggle-card">
+      <div class="checkbox-row">
+        <span style="color: #fff; font-weight: 600;">Приостановление кредита</span>
+        <input type="checkbox" id="suspendCheck" v-model="form.is_credit_suspended" class="form-check-input custom-checkbox" />
+      </div>
+
+      <!-- Вложенные поля, раскрывающиеся под левым чекбоксом -->
+      <div v-if="form.is_credit_suspended" class="sub-fields mt-3">
+        <div class="form-group mb-3">
+          <label style="color: #fff;">Основание приостановления кредита *</label>
+          <select v-model="form.suspend_reason" class="form-control" required>
+            <option value="" disabled selected hidden>Выберите основание приостановления кредита</option>
+            <option v-for="item in suspendReasons" :key="item.code" :value="item.code">
+              {{ item.name_ru || item.code }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label style="color: #fff;">Дата приостановления кредита *</label>
+          <input type="date" v-model="form.suspend_date" class="form-control dark-datetime-picker" required />
+        </div>
+
+        <div class="form-group mb-3">
+          <label style="color: #fff;">Документ приостановления кредита</label>
+          <input type="text" v-model="form.suspend_doc" class="form-control" placeholder="Введите документ" />
+        </div>
+      </div>
+    </div>
+
+    <!-- СЕКЦИЯ: Прощение задолженности (Правая колонка) -->
+    <div class="toggle-card">
+      <div class="checkbox-row">
+        <span style="color: #fff; font-weight: 600;">Прощение задолженности</span>
+        <input type="checkbox" id="forgiveCheck" v-model="form.is_debt_forgiven" class="form-check-input custom-checkbox" />
+      </div>
+
+      <!-- Вложенные поля, раскрывающиеся под правым чекбоксом -->
+      <div v-if="form.is_debt_forgiven" class="sub-fields mt-3">
+        <div class="form-group mb-3">
+          <label style="color: #fff;">Основание прощения задолженности *</label>
+          <select v-model="form.forgive_reason" class="form-control" required>
+            <option value="" disabled selected hidden>Выберите основание прощения задолженности</option>
+            <option v-for="item in forgiveReasons" :key="item.code" :value="item.code">
+              {{ item.name_ru || item.code }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label style="color: #fff;">Дата прощения задолженности *</label>
+          <input type="date" v-model="form.forgive_date" class="form-control dark-datetime-picker" required />
+        </div>
+
+        <div class="form-group mb-3">
+          <label style="color: #fff;">Документ прощения задолженности</label>
+          <input type="text" v-model="form.forgive_doc" class="form-control" placeholder="Введите документ" />
+        </div>
+      </div>
+    </div>
+
+
+.full-width {
+  width: 100% !important;
+}
+
+.form-grid-2col {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 15px 20px !important;
+  width: 100% !important;
+}
+
+/* Сетка для независимых карточек с чекбоксами */
+.dynamic-sections-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 20px !important;
+  align-items: start !important; /* Важно: удерживает карточки вверху независимо от их высоты */
+}
+
+.toggle-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  padding: 12px 15px;
+  width: 100%;
+}
+
+.checkbox-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.custom-checkbox {
+  width: 22px !important;
+  height: 22px !important;
+  margin: 0 !important;
+  cursor: pointer;
+}
+
+.sub-fields {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 15px;
+}
+
+  </div>
