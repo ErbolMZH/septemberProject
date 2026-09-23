@@ -1,0 +1,92 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"time"
+)
+
+type RefItem struct {
+	Code   string `json:"code"`
+	NameRu string `json:"name_ru"`
+	Type   string `json:"type"`
+}
+
+func (r *RefRepository) GetLoanTypes(ctx context.Context) ([]RefItem, error) {
+	// Точный SQL-запрос согласно условию
+	query := `
+		SELECT code, name_ru, type 
+		FROM refs 
+		WHERE type = 'LOAN_TYPE' 
+		  AND updated_at = '2026-09-10'
+		ORDER BY 1 ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []RefItem
+	for rows.Next() {
+		var item RefItem
+		if err := rows.Scan(&item.Code, &item.NameRu, &item.Type); err != nil {
+			return nil, err
+		}
+		list = append(list, item)
+	}
+
+	return list, nil
+}
+
+
+data() {
+  return {
+    creditTypes: [], // Массив для типов кредита
+    form: {
+      credit_type: ''
+    }
+  };
+},
+
+methods: {
+  async fetchCreditTypes() {
+    try {
+      // Вызов вашего API-эндпоинта
+      const response = await axios.get('/api/v1/refs', {
+        params: {
+          type: 'LOAN_TYPE',
+          updated_at: '2026-09-10'
+        }
+      });
+      
+      this.creditTypes = response.data || [];
+    } catch (error) {
+      console.error('Ошибка загрузки типов кредита:', error);
+      this.creditTypes = [];
+    }
+  }
+},
+
+created() {
+  this.fetchCreditTypes();
+}
+
+<div class="form-group mb-3">
+  <label style="color: #fff;">Тип кредита *</label>
+  <select 
+    v-model="form.credit_type" 
+    class="form-control" 
+    required
+  >
+    <option value="" disabled selected hidden>Выберите тип кредита</option>
+    <option 
+      v-for="item in creditTypes" 
+      :key="item.code" 
+      :value="item.code"
+    >
+      {{ item.name_ru || item.code }}
+    </option>
+  </select>
+</div>
