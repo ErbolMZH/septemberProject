@@ -1,0 +1,156 @@
+<!-- Контейнер для двух колонок чекбоксов -->
+<div class="checkbox-section-grid mt-4">
+
+  <!-- ЛЕВАЯ КОЛОНКА: Приостановление кредита -->
+  <div class="checkbox-column">
+    <div class="form-group mb-3 d-flex align-items-center">
+      <input 
+        type="checkbox" 
+        id="suspendCheck" 
+        v-model="form.is_credit_suspended" 
+        class="form-check-input me-2" 
+        style="width: 20px; height: 20px;" 
+      />
+      <label for="suspendCheck" style="color: #fff; cursor: pointer;" class="mb-0">
+        Приостановление кредита
+      </label>
+    </div>
+
+    <!-- Раскрывающийся блок слева -->
+    <div v-if="form.is_credit_suspended" class="suspended-box p-3">
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Основание приостановления кредита *</label>
+        <select v-model="form.suspend_reason" class="form-control" required>
+          <option value="" disabled selected hidden>Выберите основание</option>
+          <option v-for="r in suspendReasons" :key="r.code" :value="r.code">
+            {{ r.name_ru || r.code }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Дата приостановления кредита *</label>
+        <input type="date" v-model="form.suspend_date" class="form-control dark-datetime-picker" required />
+      </div>
+
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Документ приостановления кредита *</label>
+        <select v-model="form.suspend_doc_type" class="form-control" required>
+          <option value="" disabled selected hidden>Выберите тип документа</option>
+          <option v-for="d in docTypes" :key="d.code" :value="d.code">
+            {{ d.name_ru || d.code }}
+          </option>
+        </select>
+      </div>
+
+      <div class="file-upload-zone p-3 text-center">
+        <p style="color: #aaa; font-size: 12px; margin-bottom: 8px;">
+          Файл до 10 МБ в формате pdf, jpg, jpeg, tiff, bmp, png
+        </p>
+        <input type="file" ref="suspendFile" @change="handleSuspendFiles" multiple class="d-none" id="suspendFileInput" />
+        <label for="suspendFileInput" class="btn btn-outline-light btn-sm" style="cursor: pointer;">
+          📎 Нажмите или перетащите сюда
+        </label>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ПРАВАЯ КОЛОНКА: Прощение задолженности -->
+  <div class="checkbox-column">
+    <div class="form-group mb-3 d-flex align-items-center">
+      <input 
+        type="checkbox" 
+        id="forgiveCheck" 
+        v-model="form.is_debt_forgiven" 
+        class="form-check-input me-2" 
+        style="width: 20px; height: 20px;" 
+      />
+      <label for="forgiveCheck" style="color: #fff; cursor: pointer;" class="mb-0">
+        Прощение задолженности
+      </label>
+    </div>
+
+    <!-- Раскрывающийся блок СТРОГО СПРАВА -->
+    <div v-if="form.is_debt_forgiven" class="forgiven-box p-3">
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Основание прощения задолженности *</label>
+        <select v-model="form.forgive_reason" class="form-control" required>
+          <option value="" disabled selected hidden>Выберите основание прощения задолженности...</option>
+          <option v-for="r in forgiveReasons" :key="r.code" :value="r.code">
+            {{ r.name_ru || r.code }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Дата прощения задолженности *</label>
+        <input type="date" v-model="form.forgive_date" class="form-control dark-datetime-picker" required />
+      </div>
+
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Сумма прощенной задолженности *</label>
+        <input type="number" v-model="form.forgive_amount" class="form-control" placeholder="Введите сумму прощенной задолженности" required />
+      </div>
+
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Валюта *</label>
+        <select v-model="form.forgive_currency" class="form-control" required>
+          <option value="" disabled selected hidden>Выберите валюту</option>
+          <option v-for="curr in currencies" :key="curr.code" :value="curr.code">
+            {{ curr.code }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group mb-3">
+        <label style="color: #fff;">Документ прощения задолженности *</label>
+        <select v-model="form.forgive_doc_type" class="form-control" required>
+          <option value="" disabled selected hidden>Выберите тип документа</option>
+          <option v-for="d in docTypes" :key="d.code" :value="d.code">
+            {{ d.name_ru || d.code }}
+          </option>
+        </select>
+      </div>
+
+      <div class="file-upload-zone p-3 text-center">
+        <p style="color: #aaa; font-size: 12px; margin-bottom: 8px;">
+          Файл до 10 МБ в формате pdf, jpg, jpeg, tiff, bmp, png
+        </p>
+        <input type="file" ref="forgiveFile" @change="handleForgiveFiles" multiple class="d-none" id="forgiveFileInput" />
+        <label for="forgiveFileInput" class="btn btn-outline-light btn-sm" style="cursor: pointer;">
+          📎 Нажмите или перетащите сюда
+        </label>
+      </div>
+    </div>
+  </div>
+
+
+.checkbox-section-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important; /* Ровно 2 равные колонки */
+  gap: 24px !important;
+  align-items: start !important; /* Привязка колонок к верхнему краю */
+  width: 100% !important;
+}
+
+.checkbox-column {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+}
+
+.suspended-box,
+.forgiven-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.file-upload-zone {
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.1);
+}
+</div>
