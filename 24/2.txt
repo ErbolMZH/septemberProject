@@ -1,0 +1,249 @@
+<div class="sender-section mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h5 class="text-white fw-bold mb-1">Отправитель</h5>
+      <span class="text-secondary small">Отправитель <span class="ms-2">Организация отправителя</span></span>
+    </div>
+    <span class="text-secondary small style-click">Свернуть</span>
+  </div>
+
+  <div class="row">
+    <!-- Левая колонка: Тип субъекта и динамические поля -->
+    <div class="col-md-6">
+
+      <!-- Выбор типа субъекта -->
+      <div class="form-group mb-3">
+        <label class="text-white form-label">Тип субъекта *</label>
+        <select 
+          v-model="form.sender_subject_type" 
+          class="form-select bg-dark text-white border-secondary"
+          :disabled="isCreditCategory"
+          @change="onSubjectTypeChange"
+        >
+          <option value="" disabled selected hidden>Выберите тип субъекта</option>
+          <option value="LEGAL">Юридическое лицо</option>
+          <option value="PHYSICAL">Физическое лицо</option>
+        </select>
+      </div>
+
+      <!-- Поля для ЮРИДИЧЕСКОГО ЛИЦА -->
+      <template v-if="form.sender_subject_type === 'LEGAL'">
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Роль *</label>
+          <select 
+            v-model="form.sender_role" 
+            class="form-select bg-dark text-white border-secondary"
+            :disabled="isCreditCategory"
+          >
+            <option value="" disabled selected hidden>Выберите роль</option>
+            <option value="suspect">suspect</option>
+            <option value="victim">victim</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Название организации *</label>
+          <input 
+            type="text" 
+            v-model="form.sender_organization_name" 
+            class="form-control bg-dark text-white border-secondary"
+            placeholder="Введите название организации"
+            :disabled="isCreditCategory"
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Дата регистрации</label>
+          <input 
+            type="date" 
+            v-model="form.sender_registration_date" 
+            class="form-control bg-dark text-white border-secondary"
+            :disabled="isCreditCategory"
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">БИН *</label>
+          <input 
+            type="text" 
+            v-model="form.sender_bin" 
+            class="form-control bg-dark text-white border-secondary"
+            placeholder="Введите номер БИН"
+            :disabled="isCreditCategory"
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Страна</label>
+          <select 
+            v-model="form.sender_country" 
+            class="form-select bg-dark text-white border-secondary"
+            :disabled="isCreditCategory"
+          >
+            <option value="" disabled selected hidden>Выберите страну</option>
+            <option value="KZ">Казахстан</option>
+            <option value="RU">Россия</option>
+          </select>
+        </div>
+      </template>
+
+      <!-- Поля для ФИЗИЧЕСКОГО ЛИЦА -->
+      <template v-else-if="form.sender_subject_type === 'PHYSICAL'">
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Роль *</label>
+          <select v-model="form.sender_role" class="form-select bg-dark text-white border-secondary">
+            <option value="" disabled selected hidden>Выберите роль</option>
+            <option value="suspect">suspect</option>
+            <option value="victim">victim</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Фамилия</label>
+          <input 
+            type="text" 
+            v-model="form.sender_last_name" 
+            class="form-control bg-dark text-white border-secondary" 
+            placeholder="Введите фамилию" 
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Имя</label>
+          <input 
+            type="text" 
+            v-model="form.sender_first_name" 
+            class="form-control bg-dark text-white border-secondary" 
+            placeholder="Введите имя" 
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Отчество</label>
+          <input 
+            type="text" 
+            v-model="form.sender_middle_name" 
+            class="form-control bg-dark text-white border-secondary" 
+            placeholder="Введите отчество" 
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">ИИН</label>
+          <input 
+            type="text" 
+            v-model="form.sender_iin" 
+            class="form-control bg-dark text-white border-secondary" 
+            placeholder="Введите номер ИИН" 
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Дата рождения</label>
+          <input 
+            type="date" 
+            v-model="form.sender_birth_date" 
+            class="form-control bg-dark text-white border-secondary" 
+          />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Пол</label>
+          <select v-model="form.sender_gender" class="form-select bg-dark text-white border-secondary">
+            <option value="" disabled selected hidden>Выберите пол</option>
+            <option value="MALE">Мужской</option>
+            <option value="FEMALE">Женский</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="text-white form-label">Страна</label>
+          <select v-model="form.sender_country" class="form-select bg-dark text-white border-secondary">
+            <option value="" disabled selected hidden>Выберите страну</option>
+            <option value="KZ">Казахстан</option>
+            <option value="RU">Россия</option>
+          </select>
+        </div>
+      </template>
+
+    </div>
+
+    <!-- Правая колонка: Организация отправителя (показывается, когда выбран тип субъекта) -->
+    <div class="col-md-6" v-if="form.sender_subject_type">
+      <div class="form-group mb-3">
+        <label class="text-white form-label">Тип реквизита</label>
+        <select v-model="form.sender_requisite_type" class="form-select bg-dark text-white border-secondary">
+          <option value="" disabled selected hidden>Выберите тип реквизита</option>
+          <option value="ACCOUNT">Счет</option>
+          <option value="CARD">Карта</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+export default {
+  data() {
+    return {
+      form: {
+        sender_subject_type: '',
+        sender_role: '',
+        sender_organization_name: '',
+        sender_registration_date: '',
+        sender_bin: '',
+        sender_country: '',
+        sender_first_name: '',
+        sender_last_name: '',
+        sender_middle_name: '',
+        sender_iin: '',
+        sender_birth_date: '',
+        sender_gender: '',
+        sender_requisite_type: ''
+      }
+    };
+  },
+  watch: {
+    isCreditCategory: {
+      immediate: true,
+      handler(isCR) {
+        if (isCR) {
+          // Только для кредитных категорий устанавливаем ВТБ и блокируем
+          this.form.sender_subject_type = 'LEGAL';
+          this.form.sender_organization_name = 'ДО АО Банк ВТБ Казахстан';
+          this.form.sender_bin = '080940010300';
+          this.form.sender_role = 'victim';
+        } else {
+          // В остальных категориях очищаем форму — пользователь выбирает сам
+          this.clearSenderForm();
+        }
+      }
+    }
+  },
+  methods: {
+    onSubjectTypeChange() {
+      // Сохраняем выбранный тип и сбрасываем введенные данные при переключении типов
+      const selectedType = this.form.sender_subject_type;
+      this.clearSenderForm();
+      this.form.sender_subject_type = selectedType;
+    },
+    clearSenderForm() {
+      this.form.sender_subject_type = '';
+      this.form.sender_role = '';
+      this.form.sender_organization_name = '';
+      this.form.sender_registration_date = '';
+      this.form.sender_bin = '';
+      this.form.sender_country = '';
+      this.form.sender_first_name = '';
+      this.form.sender_last_name = '';
+      this.form.sender_middle_name = '';
+      this.form.sender_iin = '';
+      this.form.sender_birth_date = '';
+      this.form.sender_gender = '';
+      this.form.sender_requisite_type = '';
+    }
+  }
+};
+
+
+
