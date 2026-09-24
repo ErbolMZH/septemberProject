@@ -1,0 +1,66 @@
+watch: {
+  isCreditCategory: {
+    immediate: true,
+    handler(isCR) {
+      if (isCR) {
+        // Подставляем данные банка по умолчанию для категории 'CR'
+        this.form.sender_subject_type = 'LEGAL'; // или ваш код для "Юридическое лицо"
+        this.form.sender_organization_name = 'ДО АО Банк ВТБ Казахстан';
+        this.form.sender_bin = '080940010300';
+      }
+    }
+  }
+}
+
+<div class="sender-section mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 style="color: #fff; font-weight: 600; margin: 0;">Отправитель</h5>
+    <span style="color: #aaa; cursor: pointer;">Организация отправителя</span>
+  </div>
+
+  <div class="form-group mb-3">
+    <label style="color: #fff;">Тип субъекта *</label>
+    <select 
+      v-model="form.sender_subject_type" 
+      class="form-control" 
+      :disabled="isCreditCategory"
+      required
+    >
+      <option value="" disabled selected hidden>Выберите тип субъекта</option>
+      <option value="LEGAL">Юридическое лицо</option>
+      <option value="PHYSICAL">Физическое лицо</option>
+    </select>
+  </div>
+
+  <div class="form-group mb-3">
+    <label style="color: #fff;">Название организации *</label>
+    <input 
+      type="text" 
+      v-model="form.sender_organization_name" 
+      class="form-control" 
+      placeholder="Введите название организации" 
+      :disabled="isCreditCategory"
+      required 
+    />
+  </div>
+
+  <div class="form-group mb-3">
+    <label style="color: #fff;">БИН *</label>
+    <input 
+      type="text" 
+      v-model="form.sender_bin" 
+      class="form-control" 
+      placeholder="Введите БИН" 
+      :disabled="isCreditCategory"
+      required 
+    />
+  </div>
+</div>
+
+
+  .form-control:disabled {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #ccc !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  cursor: not-allowed;
+}
