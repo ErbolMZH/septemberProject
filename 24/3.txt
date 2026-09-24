@@ -1,0 +1,233 @@
+const SenderForm = {
+  props: {
+    isCreditCategory: {
+      type: Boolean,
+      default: false
+    }
+  },
+
+  template: `
+    <div class="sender-section">
+
+      <!-- ==================== ВАРИАНТ 1: КРЕДИТНАЯ КАТЕГОРИЯ (ВТБ) ==================== -->
+      <div v-if="isCreditCategory" class="credit-sender-wrapper">
+        <div class="section-title text-uppercase fw-bold text-white mb-1">Отправитель</div>
+        <div class="section-subtitle text-secondary small mb-3">
+          Отправитель <span class="ms-3">Организация отправителя</span>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Тип субъекта *</label>
+          <select class="form-control-custom" disabled>
+            <option selected>Юридическое лицо</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Название организации *</label>
+          <input type="text" class="form-control-custom" value="ДО АО Банк ВТБ Казахстан" disabled />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">БИН *</label>
+          <input type="text" class="form-control-custom" value="080940010300" disabled />
+        </div>
+      </div>
+
+      <!-- ==================== ВАРИАНТ 2: ОСТАЛЬНЫЕ КАТЕГОРИИ ==================== -->
+      <div v-else class="other-sender-wrapper">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex gap-4">
+            <span class="text-white fw-bold">Отправитель</span>
+            <span class="text-secondary">Организация отправителя</span>
+          </div>
+          <span class="text-secondary style-click small">Свернуть</span>
+        </div>
+
+        <div class="row">
+          <!-- Левая колонка: Выбор и заполнение Отправителя -->
+          <div class="col-md-6">
+            <div class="form-group mb-3">
+              <label class="form-label">Тип субъекта *</label>
+              <select 
+                v-model="form.sender_subject_type" 
+                class="form-control-custom"
+                @change="onSubjectTypeChange"
+              >
+                <option value="" disabled selected hidden>Выберите тип субъекта</option>
+                <option value="LEGAL">Юридическое лицо</option>
+                <option value="PHYSICAL">Физическое лицо</option>
+              </select>
+            </div>
+
+            <!-- Вариант: Юридическое лицо -->
+            <template v-if="form.sender_subject_type === 'LEGAL'">
+              <div class="form-group mb-3">
+                <label class="form-label">Роль *</label>
+                <select v-model="form.sender_role" class="form-control-custom">
+                  <option value="" disabled selected hidden>Выберите роль</option>
+                  <option value="suspect">suspect</option>
+                  <option value="victim">victim</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Название организации</label>
+                <input type="text" v-model="form.sender_organization_name" class="form-control-custom" placeholder="Введите название организации" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Дата регистрации</label>
+                <input type="date" v-model="form.sender_registration_date" class="form-control-custom" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">БИН</label>
+                <input type="text" v-model="form.sender_bin" class="form-control-custom" placeholder="Введите номер БИН" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Страна</label>
+                <select v-model="form.sender_country" class="form-control-custom">
+                  <option value="" disabled selected hidden>Выберите страну</option>
+                  <option value="KZ">Казахстан</option>
+                  <option value="RU">Россия</option>
+                </select>
+              </div>
+            </template>
+
+            <!-- Вариант: Физическое лицо -->
+            <template v-else-if="form.sender_subject_type === 'PHYSICAL'">
+              <div class="form-group mb-3">
+                <label class="form-label">Роль *</label>
+                <select v-model="form.sender_role" class="form-control-custom">
+                  <option value="" disabled selected hidden>Выберите роль</option>
+                  <option value="suspect">suspect</option>
+                  <option value="victim">victim</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Фамилия</label>
+                <input type="text" v-model="form.sender_last_name" class="form-control-custom" placeholder="Введите фамилию" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Имя</label>
+                <input type="text" v-model="form.sender_first_name" class="form-control-custom" placeholder="Введите имя" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Отчество</label>
+                <input type="text" v-model="form.sender_middle_name" class="form-control-custom" placeholder="Введите отчество" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">ИИН</label>
+                <input type="text" v-model="form.sender_iin" class="form-control-custom" placeholder="Введите номер ИИН" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Дата рождения</label>
+                <input type="date" v-model="form.sender_birth_date" class="form-control-custom" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Пол</label>
+                <select v-model="form.sender_gender" class="form-control-custom">
+                  <option value="" disabled selected hidden>Выберите пол</option>
+                  <option value="MALE">Мужской</option>
+                  <option value="FEMALE">Женский</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Страна</label>
+                <select v-model="form.sender_country" class="form-control-custom">
+                  <option value="" disabled selected hidden>Выберите страну</option>
+                  <option value="KZ">Казахстан</option>
+                  <option value="RU">Россия</option>
+                </select>
+              </div>
+            </template>
+          </div>
+
+          <!-- Правая колонка: Реквизиты (показываются после выбора типа субъекта) -->
+          <div class="col-md-6" v-if="form.sender_subject_type">
+            <div class="form-group mb-3">
+              <label class="form-label">Тип реквизита</label>
+              <select v-model="form.sender_requisite_type" class="form-control-custom">
+                <option value="" disabled selected hidden>Выберите тип реквизита</option>
+                <option value="ACCOUNT">Счет</option>
+                <option value="CARD">Карта</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  `,
+
+  data() {
+    return {
+      form: {
+        sender_subject_type: '',
+        sender_role: '',
+        sender_organization_name: '',
+        sender_registration_date: '',
+        sender_bin: '',
+        sender_last_name: '',
+        sender_first_name: '',
+        sender_middle_name: '',
+        sender_iin: '',
+        sender_birth_date: '',
+        sender_gender: '',
+        sender_country: '',
+        sender_requisite_type: ''
+      }
+    };
+  },
+
+  watch: {
+    // При изменении флага категории родителя
+    isCreditCategory: {
+      immediate: true,
+      handler(isCredit) {
+        if (isCredit) {
+          this.form.sender_subject_type = 'LEGAL';
+          this.form.sender_organization_name = 'ДО АО Банк ВТБ Казахстан';
+          this.form.sender_bin = '080940010300';
+          this.form.sender_role = 'victim';
+        } else {
+          this.resetForm();
+        }
+      }
+    }
+  },
+
+  methods: {
+    onSubjectTypeChange() {
+      const selectedType = this.form.sender_subject_type;
+      this.resetForm();
+      this.form.sender_subject_type = selectedType;
+    },
+
+    resetForm() {
+      this.form.sender_subject_type = '';
+      this.form.sender_role = '';
+      this.form.sender_organization_name = '';
+      this.form.sender_registration_date = '';
+      this.form.sender_bin = '';
+      this.form.sender_last_name = '';
+      this.form.sender_first_name = '';
+      this.form.sender_middle_name = '';
+      this.form.sender_iin = '';
+      this.form.sender_birth_date = '';
+      this.form.sender_gender = '';
+      this.form.sender_country = '';
+      this.form.sender_requisite_type = '';
+    }
+  }
+};
+
