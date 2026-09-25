@@ -1,0 +1,37 @@
+formatCardMasked(event) {
+    // 1. Оставляем только цифры
+    let value = event.target.value.replace(/\D/g, '');
+
+    // 2. Ограничиваем ввод максимум 10 цифрами (6 в начале + 4 в конце)
+    if (value.length > 10) {
+      value = value.slice(0, 10);
+    }
+
+    let formatted = '';
+
+    if (value.length <= 6) {
+      // Пока введено 6 или меньше цифр
+      formatted = value;
+    } else {
+      // Если введено больше 6 цифр: берутся первые 6, вставляются 5 решеток и остаток (до 4 цифр)
+      const firstPart = value.slice(0, 6);
+      const lastPart = value.slice(6);
+      formatted = `${firstPart}#####${lastPart}`;
+    }
+
+    // Обновляем модель и значение самого input
+    this.form.sender_card_masked = formatted;
+    event.target.value = formatted;
+  }
+
+  <div class="form-group mb-3">
+  <label class="form-label">Маскированный номер карты *</label>
+  <input 
+    type="text" 
+    class="form-control" 
+    :value="form.sender_card_masked"
+    @input="formatCardMasked"
+    placeholder="123456#####1234" 
+    maxlength="15"
+  />
+</div>
