@@ -1,0 +1,63 @@
+formatIban(event) {
+    let input = event.target.value;
+
+    // 1. Оставляем только английские буквы и цифры, приводим к верхнему регистру
+    input = input.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    let result = '';
+
+    // 2. Формируем первые 2 символа (только заглавные английские буквы)
+    const lettersPart = input.replace(/[^A-Z]/g, '');
+    const firstTwoLetters = lettersPart.slice(0, 2);
+
+    if (firstTwoLetters.length > 0) {
+      // Берем первые 2 буквы и прикрепим оставшуюся часть строки
+      // Вырезаем из оригинального ввода всё, что идет после использованных букв
+      let restPart = '';
+      
+      // Ищем позицию второй найденной буквы в исходном вводе
+      let letterCount = 0;
+      let splitIndex = 0;
+      for (let i = 0; i < input.length; i++) {
+        if (/[A-Z]/.test(input[i])) {
+          letterCount++;
+          if (letterCount === 2) {
+            splitIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      if (letterCount >= 2) {
+        restPart = input.slice(splitIndex);
+      } else {
+        restPart = input.replace(/[A-Z]/g, '');
+      }
+
+      result = firstTwoLetters + restPart;
+    } else {
+      // Если еще не введено ни одной буквы, очищаем input (цифры первыми ввести нельзя)
+      result = '';
+    }
+
+    // 3. Ограничиваем максимальную длину IBAN (например, 20 символов для KZ)
+    if (result.length > 20) {
+      result = result.slice(0, 20);
+    }
+
+    // Обновляем модель и инпут
+    this.form.sender_iban = result;
+    event.target.value = result;
+  }
+
+<div class="form-group mb-3">
+  <label class="form-label">IBAN</label>
+  <input 
+    type="text" 
+    class="form-control" 
+    :value="form.sender_iban"
+    @input="formatIban"
+    placeholder="KZ123456789012345678" 
+    maxlength="20"
+  />
+</div>
