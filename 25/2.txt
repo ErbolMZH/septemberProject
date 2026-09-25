@@ -1,0 +1,418 @@
+window.SenderForm = {
+  props: {
+    isCreditCategory: {
+      type: Boolean,
+      default: false
+    },
+    selectedTransactionType: {
+      type: String,
+      default: ''
+    }
+  },
+
+  data() {
+    return {
+      isSenderExpanded: true,
+      requisiteTypes: [], // Массив для справочника типы реквизитов
+      form: {
+        sender_subject_type: '',
+        sender_role: '',
+        sender_organization_name: '',
+        sender_registration_date: '',
+        sender_bin: '',
+        sender_last_name: '',
+        sender_first_name: '',
+        sender_middle_name: '',
+        sender_iin: '',
+        sender_birth_date: '',
+        sender_gender: '',
+        sender_country: '',
+        sender_requisite_type: '',
+        // Дополнительные поля для CORPC2A
+        sender_org_name_select: '',
+        sender_org_type: 'ПО',
+        sender_card_masked: '',
+        sender_iban: '',
+        sender_account_status: '',
+        sender_balance: '',
+        sender_currency: ''
+      }
+    };
+  },
+
+  computed: {
+    // Проверка на тип транзакции CORPC2A
+    isCorpC2a() {
+      return this.selectedTransactionType === 'CORPC2A';
+    }
+  },
+
+  watch: {
+    // При выборе CORPC2A жестко ставим "Юридическое лицо" и "Карта"
+    selectedTransactionType(newVal) {
+      if (newVal === 'CORPC2A') {
+        this.form.sender_subject_type = 'LEGAL';
+        this.form.sender_requisite_type = 'CARD';
+      }
+    }
+  },
+
+  mounted() {
+    this.fetchRequisiteTypes();
+  },
+
+  methods: {
+    async fetchRequisiteTypes() {
+      try {
+        const response = await fetch('/api/refs?type=REQUISITE_TYPE');
+        const data = await response.json();
+        this.requisiteTypes = data;
+      } catch (error) {
+        console.error('Ошибка при загрузке типов реквизитов:', error);
+      }
+    },
+
+    toggleSender() {
+      this.isSenderExpanded = !this.isSenderExpanded;
+    },
+
+    onSubjectTypeChange() {
+      const selectedType = this.form.sender_subject_type;
+      this.resetForm();
+      this.form.sender_subject_type = selectedType;
+    },
+
+    resetForm() {
+      this.form = {
+        sender_subject_type: '',
+        sender_role: '',
+        sender_organization_name: '',
+        sender_registration_date: '',
+        sender_bin: '',
+        sender_last_name: '',
+        sender_first_name: '',
+        sender_middle_name: '',
+        sender_iin: '',
+        sender_birth_date: '',
+        sender_gender: '',
+        sender_country: '',
+        sender_requisite_type: '',
+        sender_org_name_select: '',
+        sender_org_type: 'ПО',
+        sender_card_masked: '',
+        sender_iban: '',
+        sender_account_status: '',
+        sender_balance: '',
+        sender_currency: ''
+      };
+    }
+  },
+
+  template: /* html */ `
+    <div class="custom-form-card">
+      <div class="custom-form-card-title sender">SENDER</div>
+
+      <!-- ==================== ВАРИАНТ 1: КРЕДИТНАЯ КАТЕГОРИЯ (ВТБ) ==================== -->
+      <div v-if="isCreditCategory" class="p-3">
+        <div style="display: flex; gap: 20px; width: 100%;">
+          <!-- Левая колонка -->
+          <div style="flex: 1;">
+            <div class="form-group mb-3">
+              <label class="form-label">Тип субъекта *</label>
+              <select class="form-control" disabled>
+                <option selected>Юридическое лицо</option>
+              </select>
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label">Название организации *</label>
+              <input type="text" class="form-control" value="ДО АО Банк ВТБ Казахстан" disabled />
+            </div>
+          </div>
+
+          <!-- Правая колонка -->
+          <div style="flex: 1;">
+            <div class="form-group mb-3">
+              <label class="form-label">БИН *</label>
+              <input type="text" class="form-control" value="080940010300" disabled />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== ВАРИАНТ 2: ОСТАЛЬНЫЕ КАТЕГОРИИ ==================== -->
+      <div v-else class="p-3">
+        <!-- ЖЕСТКАЯ ШАПКА ДЛЯ СВЕРНУТЬ / РАЗВЕРНУТЬ -->
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <span style="color: #ffffff; font-weight: bold;">Отправитель</span>
+            <span style="color: #6c757d;">Организация отправителя</span>
+          </div>
+          <div>
+            <span 
+              class="style-click" 
+              style="color: #6c757d; font-size: 13px; cursor: pointer;" 
+              @click="toggleSender"
+            >
+              {{ isSenderExpanded ? 'Свернуть' : 'Развернуть' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- ТЕЛО БЛОКА -->
+        <div v-show="isSenderExpanded" style="width: 100%;">
+
+          <!-- ==================== ВАРИАНТ 2.1: CORPC2A ==================== -->
+          <div v-if="isCorpC2a" style="display: flex; gap: 20px; width: 100%;">
+            <!-- Левая колонка -->
+            <div style="flex: 1;">
+              <div class="form-group mb-3">
+                <label class="form-label">Тип субъекта *</label>
+                <select class="form-control" disabled>
+                  <option selected value="LEGAL">Юридическое лицо</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Роль *</label>
+                <select v-model="form.sender_role" class="form-control">
+                  <option value="" disabled selected hidden>Выберите роль</option>
+                  <option value="suspect">suspect</option>
+                  <option value="victim">victim</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Название организации</label>
+                <input type="text" v-model="form.sender_organization_name" class="form-control" placeholder="Введите название организации" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Дата регистрации</label>
+                <input type="date" v-model="form.sender_registration_date" class="form-control" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">БИН</label>
+                <input type="text" v-model="form.sender_bin" class="form-control" placeholder="Введите номер БИН" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Страна</label>
+                <select v-model="form.sender_country" class="form-control">
+                  <option value="" disabled selected hidden>Выберите страну</option>
+                  <option value="KZ">Казахстан</option>
+                  <option value="RU">Россия</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Правая колонка -->
+            <div style="flex: 1;">
+              <div class="form-group mb-3">
+                <label class="form-label">Наименование организации</label>
+                <select v-model="form.sender_org_name_select" class="form-control">
+                  <option value="" disabled selected hidden>Выберите наименование организации</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Тип организации *</label>
+                <select v-model="form.sender_org_type" class="form-control">
+                  <option value="ПО" selected>ПО</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Тип реквизита *</label>
+                <select class="form-control" disabled>
+                  <option selected value="CARD">Карта</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Маскированный номер карты *</label>
+                <input type="text" v-model="form.sender_card_masked" class="form-control" placeholder="######******" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">IBAN</label>
+                <input type="text" v-model="form.sender_iban" class="form-control" placeholder="Введите IBAN" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Статус счета</label>
+                <select v-model="form.sender_account_status" class="form-control">
+                  <option value="" disabled selected hidden>Выберите статус счета</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Остаток</label>
+                <input type="text" v-model="form.sender_balance" class="form-control" placeholder="Введите баланс остатка на счету" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Валюта</label>
+                <select v-model="form.sender_currency" class="form-control">
+                  <option value="" disabled selected hidden>Выберите валюту</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==================== ВАРИАНТ 2.2: ОБЫЧНЫЙ ВЫБОР (ФИЗ / ЮР) ==================== -->
+          <div v-else>
+            <!-- Выбор типа субъекта -->
+            <div style="margin-bottom: 15px; width: 100%;">
+              <div class="form-group">
+                <label class="form-label">Тип субъекта *</label>
+                <select 
+                  v-model="form.sender_subject_type" 
+                  class="form-control"
+                  @change="onSubjectTypeChange"
+                >
+                  <option value="" disabled selected hidden>Выберите тип субъекта</option>
+                  <option value="LEGAL">Юридическое лицо</option>
+                  <option value="PHYSICAL">Физическое лицо</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- ПОЛЯ ДЛЯ ФИЗИЧЕСКОГО ЛИЦА (2 КОЛОНКИ) -->
+            <div v-if="form.sender_subject_type === 'PHYSICAL'" style="display: flex; gap: 20px; width: 100%;">
+              <!-- Левая колонка -->
+              <div style="flex: 1;">
+                <div class="form-group mb-3">
+                  <label class="form-label">Роль *</label>
+                  <select v-model="form.sender_role" class="form-control">
+                    <option value="" disabled selected hidden>Выберите роль</option>
+                    <option value="suspect">suspect</option>
+                    <option value="victim">victim</option>
+                  </select>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Фамилия</label>
+                  <input type="text" v-model="form.sender_last_name" class="form-control" placeholder="Введите фамилию" />
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Имя</label>
+                  <input type="text" v-model="form.sender_first_name" class="form-control" placeholder="Введите имя" />
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Отчество</label>
+                  <input type="text" v-model="form.sender_middle_name" class="form-control" placeholder="Введите отчество" />
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">ИИН</label>
+                  <input type="text" v-model="form.sender_iin" class="form-control" placeholder="Введите номер ИИН" />
+                </div>
+              </div>
+
+              <!-- Правая колонка -->
+              <div style="flex: 1;">
+                <div class="form-group mb-3">
+                  <label class="form-label">Дата рождения</label>
+                  <input type="date" v-model="form.sender_birth_date" class="form-control" />
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Пол</label>
+                  <select v-model="form.sender_gender" class="form-control">
+                    <option value="" disabled selected hidden>Выберите пол</option>
+                    <option value="MALE">Мужской</option>
+                    <option value="FEMALE">Женский</option>
+                  </select>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Страна</label>
+                  <select v-model="form.sender_country" class="form-control">
+                    <option value="" disabled selected hidden>Выберите страну</option>
+                    <option value="KZ">Казахстан</option>
+                    <option value="RU">Россия</option>
+                  </select>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Тип реквизита</label>
+                  <select v-model="form.sender_requisite_type" class="form-control">
+                    <option value="" disabled selected hidden>Выберите тип реквизита</option>
+                    <option 
+                      v-for="item in requisiteTypes" 
+                      :key="item.code" 
+                      :value="item.code"
+                    >
+                      {{ item.name_ru }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- ПОЛЯ ДЛЯ ЮРИДИЧЕСКОГО ЛИЦА (2 КОЛОНКИ) -->
+            <div v-else-if="form.sender_subject_type === 'LEGAL'" style="display: flex; gap: 20px; width: 100%;">
+              <!-- Левая колонка -->
+              <div style="flex: 1;">
+                <div class="form-group mb-3">
+                  <label class="form-label">Роль *</label>
+                  <select v-model="form.sender_role" class="form-control">
+                    <option value="" disabled selected hidden>Выберите роль</option>
+                    <option value="suspect">suspect</option>
+                    <option value="victim">victim</option>
+                  </select>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Название организации</label>
+                  <input type="text" v-model="form.sender_organization_name" class="form-control" placeholder="Введите название организации" />
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">БИН</label>
+                  <input type="text" v-model="form.sender_bin" class="form-control" placeholder="Введите номер БИН" />
+                </div>
+              </div>
+
+              <!-- Правая колонка -->
+              <div style="flex: 1;">
+                <div class="form-group mb-3">
+                  <label class="form-label">Дата регистрации</label>
+                  <input type="date" v-model="form.sender_registration_date" class="form-control" />
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Страна</label>
+                  <select v-model="form.sender_country" class="form-control">
+                    <option value="" disabled selected hidden>Выберите страну</option>
+                    <option value="KZ">Казахстан</option>
+                    <option value="RU">Россия</option>
+                  </select>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Тип реквизита</label>
+                  <select v-model="form.sender_requisite_type" class="form-control">
+                    <option value="" disabled selected hidden>Выберите тип реквизита</option>
+                    <option 
+                      v-for="item in requisiteTypes" 
+                      :key="item.code" 
+                      :value="item.code"
+                    >
+                      {{ item.name_ru }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `
+};
