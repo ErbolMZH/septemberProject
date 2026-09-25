@@ -1,0 +1,142 @@
+computed: {
+  // Проверяем, выбран ли тип транзакции CORPC2A
+  isCorpC2a() {
+    return this.selectedTransactionType === 'CORPC2A';
+  }
+},
+watch: {
+  // При выборе CORPC2A автоматически выставляем "Юридическое лицо" и "Карта"
+  selectedTransactionType(newVal) {
+    if (newVal === 'CORPC2A') {
+      this.form.sender_subject_type = 'LEGAL';
+      this.form.sender_requisite_type = 'CARD';
+    }
+  }
+}
+
+<div v-show="isSenderExpanded" style="width: 100%; margin-top: 15px;">
+
+  <!-- ЕСЛИ ТИП ТРАНЗАКЦИИ CORPC2A -->
+  <template v-if="isCorpC2a">
+    <div style="display: flex; gap: 20px; width: 100%;">
+      
+      <!-- Левая колонка -->
+      <div style="flex: 1;">
+        <!-- Тип субъекта (Заблокирован) -->
+        <div class="form-group mb-3">
+          <label class="form-label">Тип субъекта *</label>
+          <select class="form-control" disabled>
+            <option selected value="LEGAL">Юридическое лицо</option>
+          </select>
+        </div>
+
+        <!-- Роль * -->
+        <div class="form-group mb-3">
+          <label class="form-label">Роль *</label>
+          <select v-model="form.sender_role" class="form-control">
+            <option value="" disabled selected hidden>Выберите роль</option>
+            <option value="suspect">suspect</option>
+            <option value="victim">victim</option>
+          </select>
+        </div>
+
+        <!-- Название организации -->
+        <div class="form-group mb-3">
+          <label class="form-label">Название организации</label>
+          <input type="text" v-model="form.sender_organization_name" class="form-control" placeholder="Введите название организации" />
+        </div>
+
+        <!-- Дата регистрации -->
+        <div class="form-group mb-3">
+          <label class="form-label">Дата регистрации</label>
+          <input type="date" v-model="form.sender_registration_date" class="form-control" />
+        </div>
+
+        <!-- БИН -->
+        <div class="form-group mb-3">
+          <label class="form-label">БИН</label>
+          <input type="text" v-model="form.sender_bin" class="form-control" placeholder="Введите номер БИН" />
+        </div>
+
+        <!-- Страна -->
+        <div class="form-group mb-3">
+          <label class="form-label">Страна</label>
+          <select v-model="form.sender_country" class="form-control">
+            <option value="" disabled selected hidden>Выберите страну</option>
+            <option value="KZ">Казахстан</option>
+            <option value="RU">Россия</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Правая колонка -->
+      <div style="flex: 1;">
+        <!-- Наименование организации -->
+        <div class="form-group mb-3">
+          <label class="form-label">Наименование организации</label>
+          <select v-model="form.sender_org_name_select" class="form-control">
+            <option value="" disabled selected hidden>Выберите наименование организации</option>
+            <!-- Справочник -->
+          </select>
+        </div>
+
+        <!-- Тип организации * -->
+        <div class="form-group mb-3">
+          <label class="form-label">Тип организации *</label>
+          <select v-model="form.sender_org_type" class="form-control">
+            <option value="ПО" selected>ПО</option>
+          </select>
+        </div>
+
+        <!-- Тип реквизита (Заблокирован: Карта) -->
+        <div class="form-group mb-3">
+          <label class="form-label">Тип реквизита *</label>
+          <select class="form-control" disabled>
+            <option selected value="CARD">Карта</option>
+          </select>
+        </div>
+
+        <!-- Маскированный номер карты * -->
+        <div class="form-group mb-3">
+          <label class="form-label">Маскированный номер карты *</label>
+          <input type="text" v-model="form.sender_card_masked" class="form-control" placeholder="######******" />
+        </div>
+
+        <!-- IBAN -->
+        <div class="form-group mb-3">
+          <label class="form-label">IBAN</label>
+          <input type="text" v-model="form.sender_iban" class="form-control" placeholder="Введите IBAN" />
+        </div>
+
+        <!-- Статус счета -->
+        <div class="form-group mb-3">
+          <label class="form-label">Статус счета</label>
+          <select v-model="form.sender_account_status" class="form-control">
+            <option value="" disabled selected hidden>Выберите статус счета</option>
+          </select>
+        </div>
+
+        <!-- Остаток -->
+        <div class="form-group mb-3">
+          <label class="form-label">Остаток</label>
+          <input type="text" v-model="form.sender_balance" class="form-control" placeholder="Введите баланс остатка на счету" />
+        </div>
+
+        <!-- Валюта -->
+        <div class="form-group mb-3">
+          <label class="form-label">Валюта</label>
+          <select v-model="form.sender_currency" class="form-control">
+            <option value="" disabled selected hidden>Выберите валюту</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </template>
+
+  <!-- ИНАЧЕ: ОБЫЧНЫЙ ВЫБОР (Физ / Юр лицо) -->
+  <template v-else>
+    <!-- Базовый код для остальных типов транзакций -->
+  </template>
+
+</div>
