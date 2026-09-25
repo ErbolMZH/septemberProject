@@ -1,0 +1,31 @@
+methods: {
+  // ... твои методы ...
+
+  formatIban(event) {
+    let raw = event.target.value.toUpperCase();
+
+    // 1. Извлекаем первые 2 английские буквы
+    const letters = raw.replace(/[^A-Z]/g, '').slice(0, 2);
+
+    // 2. Если букв еще нет или только 1, поле берет только эти буквы (цифры до этого игнорируются)
+    if (letters.length < 2) {
+      this.form.sender_iban = letters;
+      event.target.value = letters;
+      return;
+    }
+
+    // 3. Если первые 2 буквы уже есть, всё оставшееся очищаем до ТОЛЬКО ЦИФР
+    // Берём хвост строки после ввода первых 2 букв и отсекаем всё, кроме 0-9
+    let numbers = raw.slice(2).replace(/\D/g, '');
+
+    // 4. Ограничиваем длину цифровой части (например, до 18 цифр для стандарта KZ, итого 20 символов)
+    if (numbers.length > 18) {
+      numbers = numbers.slice(0, 18);
+    }
+
+    const result = letters + numbers;
+
+    this.form.sender_iban = result;
+    event.target.value = result;
+  }
+}
