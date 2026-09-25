@@ -1,0 +1,275 @@
+const SenderFormDynamic = {
+  name: 'SenderFormDynamic',
+  
+  props: {
+    isCreditCategory: {
+      type: Boolean,
+      default: false
+    },
+    selectedTransactionType: {
+      type: [String, Number, Object],
+      default: ''
+    }
+  },
+
+  data() {
+    return {
+      isSenderExpanded: true,
+
+      // Конфигурация сценариев по типам транзакций
+      fieldsConfig: {
+        'P2P': {
+          defaultSubjectType: 'INDIVIDUAL',
+          showPhone: true,
+          showCardMasked: true,
+          showIban: false,
+          showOrgType: false
+        },
+        'CORPC2A': {
+          defaultSubjectType: 'LEGAL',
+          showPhone: false,
+          showCardMasked: true,
+          showIban: true,
+          showOrgType: true
+        },
+        'CORPA2C': {
+          defaultSubjectType: 'LEGAL',
+          showPhone: false,
+          showCardMasked: true,
+          showIban: true,
+          showOrgType: true
+        }
+        // Сюда легко добавлять новые типы транзакций (C2B, A2P и т.д.)
+      },
+
+      // Единая модель формы
+      form: {
+        sender_subject_type: 'INDIVIDUAL', // 'INDIVIDUAL' или 'LEGAL'
+        sender_role: '',
+        sender_organization_name: '',
+        sender_registration_date: '',
+        sender_bin: '',
+        sender_last_name: '',
+        sender_first_name: '',
+        sender_middle_name: '',
+        sender_iin: '',
+        sender_birth_date: '',
+        sender_gender: '',
+        sender_country: '',
+        sender_requisite_type: '',
+        sender_phone: '',
+        sender_org_type: 'ПО',
+        sender_card_masked: '',
+        sender_iban: '',
+        sender_account_status: '',
+        sender_balance: '',
+        sender_currency: ''
+      }
+    };
+  },
+
+  computed: {
+    // Вычисляем активную конфигурацию полей
+    currentConfig() {
+      const type = String(this.selectedTransactionType || '').trim().toUpperCase();
+      return this.fieldsConfig[type] || {
+        defaultSubjectType: 'INDIVIDUAL',
+        showPhone: false,
+        showCardMasked: false,
+        showIban: false,
+        showOrgType: false
+      };
+    },
+
+    // Флаг проверки Физического лица
+    isIndividual() {
+      return this.form.sender_subject_type === 'INDIVIDUAL' || this.form.sender_subject_type === 'PHYSICAL';
+    },
+
+    // Флаг проверки Юридического лица
+    isLegal() {
+      return this.form.sender_subject_type === 'LEGAL';
+    }
+  },
+
+  watch: {
+    // Отслеживаем изменение типа транзакции и выставляем тип субъекта по умолчанию
+    selectedTransactionType: {
+      immediate: true,
+      handler(newVal) {
+        if (!newVal) return;
+        const type = String(newVal).trim().toUpperCase();
+        const config = this.fieldsConfig[type];
+
+        if (config && config.defaultSubjectType) {
+          this.form.sender_subject_type = config.defaultSubjectType;
+        }
+      }
+    }
+  },
+
+  methods: {
+    // 1. Форматирование номера телефона: +7 (7XX) XXX-XX-XX
+    formatPhone(event) {
+      let input = event.target.value.replace(/\D/g, '');
+      if (input.startsWith('8')) input = '7' + input.slice(1);
+      if (!input.startsWith('7')) input = '7' + input;
+
+      input = input.slice(0, 11);
+
+      let formatted = '+7';
+      if (input.length > 1) formatted += ' (' + input.slice(1, 4);
+      if (input.length >= 4) formatted += ') ' + input.slice(4, 7);
+      if (input.length >= 7) formatted += '-' + input.slice(7, 9);
+      if (input.length >= 9) formatted += '-' + input.slice(9, 11);
+
+      this.form.sender_phone = formatted;
+      event.target.value = formatted;
+    },
+
+    // 2. Форматирование маскированной карты: 6 цифр + 5 решеток + 4 цифры
+    formatCardMasked(event) {
+      let value = event.target.value.replace(/\D/g, '');
+      if (value.length > 10) value = value.slice(0, 10);
+
+      let formatted = '';
+      if (value.length <= 6) {
+        formatted = value;
+      } else {
+        const firstPart = value.slice(0, 6);
+        const lastPart = value.slice(6);
+        formatted = `${firstPart}#####${lastPart}`;
+      }
+
+      this.form.sender_card_masked = formatted;
+      event.target.value = formatted;
+    },
+
+    // 3. Форматирование IBAN: 2 заглавные буквы + до 18 цифр
+    formatIban(event) {
+      let raw = event.target.value.toUpperCase();
+      const letters = raw.replace(/[^A-Z]/g, '').slice(0, 2);
+
+      if (letters.length < 2) {
+        this.form.sender_iban = letters;
+        event.target.value = letters;
+        return;
+      }
+
+      let numbers = raw.slice(2).replace(/\D/g, '');
+      if (numbers.length > 18) numbers = numbers.slice(0, 18);
+
+      const result = letters + numbers;
+      this.form.sender_iban = result;
+      event.target.value = result;
+    }
+  },
+
+  template: `
+    <div class="custom-form-card">
+      <div class="custom-form-card-title sender" @click="isSenderExpanded = !isSenderExpanded">
+        Отправитель
+      </div>
+
+      <div v-show="isSenderExpanded" class="mt-3">
+        <!-- ТИП СУБЪЕКТА -->
+        <div class="form-group mb-3">
+          <label class="form-label">Тип субъекта *</label>
+          <select v-model="form.sender_subject_type" class="form-control">
+            <option value="INDIVIDUAL">Физическое лицо</option>
+            <option value="LEGAL">Юридическое лицо</option>
+          </select>
+        </div>
+
+        <!-- ================= СЕКЦИЯ: ФИЗИЧЕСКОЕ ЛИЦО ================= -->
+        <template v-if="isIndividual">
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Фамилия *</label>
+              <input type="text" class="form-control" v-model="form.sender_last_name" placeholder="Введите фамилию" />
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Имя *</label>
+              <input type="text" class="form-control" v-model="form.sender_first_name" placeholder="Введите имя" />
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Отчество</label>
+              <input type="text" class="form-control" v-model="form.sender_middle_name" placeholder="Введите отчество" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">ИИН *</label>
+              <input type="text" class="form-control" v-model="form.sender_iin" maxlength="12" placeholder="12 цифр" />
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Дата рождения</label>
+              <input type="date" class="form-control" v-model="form.sender_birth_date" />
+            </div>
+          </div>
+        </template>
+
+        <!-- ================= СЕКЦИЯ: ЮРИДИЧЕСКОЕ ЛИЦО ================= -->
+        <template v-if="isLegal">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Название организации *</label>
+              <input type="text" class="form-control" v-model="form.sender_organization_name" placeholder="ООО / ТОО..." />
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">БИН *</label>
+              <input type="text" class="form-control" v-model="form.sender_bin" maxlength="12" placeholder="12 цифр БИН" />
+            </div>
+          </div>
+
+          <div class="row" v-if="currentConfig.showOrgType">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Форма организации</label>
+              <input type="text" class="form-control" v-model="form.sender_org_type" />
+            </div>
+          </div>
+        </template>
+
+        <!-- ================= СЕКЦИЯ: ДОПОЛНИТЕЛЬНЫЕ РЕКВИЗИТЫ ================= -->
+        <!-- Поле Номер телефона (P2P) -->
+        <div class="form-group mb-3" v-if="currentConfig.showPhone">
+          <label class="form-label">Номер телефона отправителя *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            :value="form.sender_phone" 
+            @input="formatPhone" 
+            placeholder="+7 (7XX) XXX-XX-XX" 
+          />
+        </div>
+
+        <!-- Поле Маскированная карта -->
+        <div class="form-group mb-3" v-if="currentConfig.showCardMasked">
+          <label class="form-label">Маскированный номер карты *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            :value="form.sender_card_masked" 
+            @input="formatCardMasked" 
+            placeholder="123456#####1234" 
+            maxlength="15" 
+          />
+        </div>
+
+        <!-- Поле IBAN -->
+        <div class="form-group mb-3" v-if="currentConfig.showIban">
+          <label class="form-label">IBAN *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            :value="form.sender_iban" 
+            @input="formatIban" 
+            placeholder="KZ123456789012345678" 
+            maxlength="20" 
+          />
+        </div>
+      </div>
+    </div>
+  `
+};
